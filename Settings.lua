@@ -15,11 +15,20 @@ local category
 -- Key binding
 --------------------------------------------------------------------------------
 
--- the key(s) that open the list, as the game shows them ("Shift-O"), or nil
+-- "SHIFT-O" -> "Shift-O", "CTRL-ALT-F" -> "Ctrl-Alt-F"
+local function PrettyKey(key)
+	local text = (GetBindingText and GetBindingText(key)) or key
+	return (text:gsub("%u%u+", function(word)
+		if #word <= 1 then return word end
+		return word:sub(1, 1) .. word:sub(2):lower()
+	end))
+end
+
+-- the key that opens the list, as "Shift-O", or nil
 function Options.KeyText()
 	local key = Safe.Call(GetBindingKey, ns.BINDING)
 	if not key then return nil end
-	return (GetBindingText and GetBindingText(key)) or key
+	return PrettyKey(key)
 end
 
 -- once per account: bind Shift-O, unless the player already chose a key or Shift-O is taken
@@ -31,7 +40,7 @@ local function OfferDefaultKey()
 
 	if Safe.Call(GetBindingKey, ns.BINDING) then return end
 	local action = Safe.Call(GetBindingAction, ns.DEFAULT_KEY)
-	local keyText = (GetBindingText and GetBindingText(ns.DEFAULT_KEY)) or ns.DEFAULT_KEY
+	local keyText = PrettyKey(ns.DEFAULT_KEY)
 	if action and action ~= "" then
 		local actionName = (GetBindingName and GetBindingName(action)) or action
 		ns.Print("%s is already used for \"%s\", so no key opens the list yet. Pick one in Options > AddOns > Old Friends List.",
@@ -41,7 +50,7 @@ local function OfferDefaultKey()
 	local ok = pcall(SetBinding, ns.DEFAULT_KEY, ns.BINDING)
 	if ok and GetCurrentBindingSet and SaveBindings then pcall(SaveBindings, GetCurrentBindingSet()) end
 	if ok then
-		ns.Print("press %s to open your list. Change it in Options > AddOns > Old Friends List.", keyText)
+		ns.Print("Press %s to open your list. You can change it in Options > AddOns > Old Friends List.", keyText)
 	end
 end
 

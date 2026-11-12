@@ -28,7 +28,8 @@ ns.DEFAULTS = DEFAULTS
 
 function ns.Print(fmt, ...)
 	local msg = select("#", ...) > 0 and fmt:format(...) or tostring(fmt)
-	DEFAULT_CHAT_FRAME:AddMessage("|cff" .. ns.ACCENT .. "Old Friends|r: " .. msg)
+	msg = msg:gsub("^%l", string.upper)
+	DEFAULT_CHAT_FRAME:AddMessage("|cff" .. ns.ACCENT .. ns.NAME .. "|r: " .. msg)
 end
 
 function ns.Debug(fmt, ...)
