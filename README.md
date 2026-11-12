@@ -70,6 +70,8 @@ something else. To pick another key, open *Options → AddOns → Old Friends Li
 | `/ofl ping <first last>` | Check one character right now and print the result |
 | `/ofl diag` | Show which game features this client supports (handy for bug reports) |
 | `/ofl debug` | Turn debug messages on or off |
+| `/ofl help` | Show the everyday commands in chat |
+| `/ofl advanced` | Show every command in chat |
 
 ## How it works
 

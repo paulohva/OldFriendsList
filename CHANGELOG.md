@@ -10,7 +10,9 @@ All notable changes to Old Friends List are listed here.
   only if Shift-O isn't already used for something else.
 - **Options panel** in *Options → AddOns → Old Friends List*: change the key binding, and turn
   notifications, sound, zone sharing, the check interval and the minimap button on or off.
+- A small gear in the list window's top-right corner opens the options panel.
 - `/ofl config` now opens the options panel; `/ofl status` prints your settings in chat.
+- `/ofl help` shows only the everyday commands; `/ofl advanced` shows them all.
 - The minimap button's right-click menu has a shortcut to the options panel, and its tooltip
   shows your key binding.
 

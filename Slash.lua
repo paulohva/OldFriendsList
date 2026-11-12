@@ -7,6 +7,9 @@ local Data, Presence, UI = ns.Data, ns.Presence, ns.UI
 
 local function OnOff(v) return v and "|cff20ff20on|r" or "|cffff4040off|r" end
 
+local GREY = "|cff808080"
+
+-- the everyday commands
 local function Help()
 	ns.Print("commands:")
 	print("  /ofl - open or close the list")
@@ -15,11 +18,27 @@ local function Help()
 	print("  /ofl note <first last> <text> - set a note (no text clears it)")
 	print("  /ofl list - print the list with who's online")
 	print("  /ofl config - open the options (settings and key binding)")
+	print("  /ofl minimap - show or hide the minimap button")
+	print(GREY .. "  /ofl advanced - all commands|r")
+end
+
+-- everything
+local function Advanced()
+	ns.Print("all commands:")
+	print("  /ofl - open or close the list")
+	print("  /ofl add <first last> - add a character, e.g. /ofl add Asha Brightvale")
+	print("  /ofl remove <first last> - remove a character")
+	print("  /ofl note <first last> <text> - set a note (no text clears it)")
+	print("  /ofl list - print the list with who's online")
+	print("  /ofl config - open the options (settings and key binding)")
 	print("  /ofl status - print your settings in chat")
-	print("  /ofl online|offline|sound|zone on|off - toggle notifications / sound / sharing your zone")
+	print("  /ofl online on|off - \"has come online\" messages")
+	print("  /ofl offline on|off - \"has gone offline\" messages")
+	print("  /ofl sound on|off - login sound")
+	print("  /ofl zone on|off - share your zone with friends who use the addon")
 	print("  /ofl interval <seconds> - how often each friend is checked (15-300)")
 	print("  /ofl minimap - show or hide the minimap button")
-	print("  /ofl ping <name> - check one character now and print the result")
+	print("  /ofl ping <first last> - check one character now and print the result")
 	print("  /ofl diag - check which game APIs this client has")
 	print("  /ofl debug - toggle debug messages")
 end
@@ -97,6 +116,8 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		UI.Toggle()
 	elseif cmd == "help" or cmd == "?" then
 		Help()
+	elseif cmd == "advanced" then
+		Advanced()
 	elseif cmd == "add" then
 		if rest == "" then ns.Actions.AddPrompt() else ns.Actions.AddByName(rest) end
 	elseif cmd == "remove" or cmd == "del" then

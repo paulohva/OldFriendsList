@@ -305,9 +305,38 @@ local function Build()
 	elseif frame.TitleText then frame.TitleText:SetText(ns.NAME) end
 	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, ICON) end
 
+	-- a small, quiet gear: opens Options > AddOns > Old Friends List
+	local gear = CreateFrame("Button", nil, frame)
+	gear:SetSize(16, 16)
+	gear:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -35)
+	local gearIcon = gear:CreateTexture(nil, "ARTWORK")
+	gearIcon:SetAllPoints()
+	if not (gearIcon.SetAtlas and pcall(gearIcon.SetAtlas, gearIcon, "QuestLog-icon-setting")) then
+		gearIcon:SetTexture("Interface\\Buttons\\UI-OptionsButton")
+	end
+	gearIcon:SetDesaturated(true)
+	gear:SetAlpha(0.45)
+	gear:SetScript("OnEnter", function(self)
+		self:SetAlpha(1)
+		gearIcon:SetDesaturated(false)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine("Settings")
+		local key = ns.Options and ns.Options.KeyText()
+		GameTooltip:AddLine(key and ("Notifications, key binding (" .. key .. ") and more.") or "Notifications, key binding and more.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	gear:SetScript("OnLeave", function(self)
+		self:SetAlpha(0.45)
+		gearIcon:SetDesaturated(true)
+		GameTooltip:Hide()
+	end)
+	gear:SetScript("OnClick", function()
+		if not (ns.Options and ns.Options.Open()) then ns.Print("The options panel isn't available; type /ofl help.") end
+	end)
+
 	onlineText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	onlineText:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -36)
-	onlineText:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
+	onlineText:SetPoint("TOPRIGHT", gear, "TOPLEFT", -6, -1)
 	onlineText:SetJustifyH("LEFT")
 
 	local inset = frame.Inset or frame
