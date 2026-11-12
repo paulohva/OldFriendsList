@@ -1,0 +1,288 @@
+--------------------------------------------------------------------------------
+-- Presence: who's online
+--  1. Silent ping: an addon whisper to each friend in turn. Offline -> the server
+--     answers "No player named '%s' is currently playing." (hidden from chat);
+--     no answer within a few seconds -> online.
+--  2. Handshake (Comm.lua): friends running this addon answer at once.
+--  3. Passive: anything they say, being in your group, targeting them.
+--  4. Who: a /who for one friend, on a click (the game only allows it then).
+-- Pings pause in combat and instances (the game blocks addon messages there).
+--------------------------------------------------------------------------------
+
+local _, ns = ...
+local Safe, Data, Comm, Notify = ns.Safe, ns.Data, ns.Comm, ns.Notify
+
+local Presence = {}
+ns.Presence = Presence
+Presence.probe = {}         -- keys pinged by hand (/ofl ping): report the outcome
+
+local TICK = 1.5            -- seconds between pings (keeps well under the addon message throttle)
+local TIMEOUT = 4           -- no "No player named" by then -> online
+local SUMMARY_MAX_WAIT = 90 -- print the login summary by then even if some checks are still pending
+
+local pending = {}          -- key -> GetTime() of a ping awaiting an answer
+local lastCheck = {}        -- key -> GetTime() of the last ping
+local decided = {}          -- system message id -> hidden? (filters run once per chat frame)
+local decidedCount = 0
+local readyAt               -- GetTime() after which pinging may start (after loading screens)
+local loginAt
+local pausedReason
+
+--------------------------------------------------------------------------------
+-- "No player named '%s' is currently playing."
+--------------------------------------------------------------------------------
+
+local NOT_FOUND_PATTERN
+do
+	local s = ERR_CHAT_PLAYER_NOT_FOUND_S or "No player named '%s' is currently playing."
+	s = s:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+	s = s:gsub("%%%%s", "(.+)")
+	NOT_FOUND_PATTERN = "^" .. s .. "$"
+end
+
+-- true when this message answers one of our pings (and should be hidden)
+local function HandleNotFound(msg, lineID)
+	msg = Safe.Value(msg)
+	if type(msg) ~= "string" then return false end
+	local name = msg:match(NOT_FOUND_PATTERN)
+	if not name then return false end
+	local id = Safe.Value(lineID) or (msg .. math.floor(GetTime()))
+	if decided[id] ~= nil then return decided[id] end
+
+	local key = Data.Normalize(name)
+	local ours = key ~= nil and pending[key] ~= nil
+	decided[id] = ours
+	decidedCount = decidedCount + 1
+	if decidedCount > 200 then wipe(decided) decidedCount = 0 decided[id] = ours end
+
+	if key and Presence.probe[key] then
+		Presence.probe[key] = nil
+		ns.Print("%s: offline (the server said 'No player named ...', hidden from chat: %s).", key, ours and "yes" or "no")
+	end
+	if key and Data.Has(key) then
+		pending[key] = nil
+		Data.SetStatus(key, "offline")
+		ns.Debug("%s is offline%s", key, ours and "" or " (from your own whisper)")
+	elseif key then
+		pending[key] = nil
+	end
+	return ours
+end
+
+local function SystemFilter(_, _, msg, ...)
+	local lineID = select(10, ...)
+	if HandleNotFound(msg, lineID) then return true end
+	return false
+end
+
+ns.On("CHAT_MSG_SYSTEM", function(msg, ...)
+	HandleNotFound(msg, (select(10, ...)))
+end)
+
+do
+	local add = (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter
+	if add then
+		add("CHAT_MSG_SYSTEM", SystemFilter)
+	else
+		ns.Debug("no chat filter API: ping errors will show in chat")
+	end
+end
+
+--------------------------------------------------------------------------------
+-- The scheduler
+--------------------------------------------------------------------------------
+
+-- an answer came some other way (handshake): stop waiting for this ping
+function Presence.Resolve(key)
+	pending[key] = nil
+end
+
+-- ask about this friend as soon as possible
+function Presence.CheckSoon(key)
+	lastCheck[key] = nil
+end
+
+function Presence.PausedReason()
+	return pausedReason
+end
+
+local function Pause(reason)
+	local changed = pausedReason ~= reason
+	if changed then ns.Debug("pings paused: %s", reason) end
+	pausedReason = reason
+	if changed then ns.Fire("PAUSE_CHANGED") end
+	-- an answer can't be trusted now: forget the open pings
+	wipe(pending)
+end
+
+local function NextFriend(now)
+	local interval = ns.db.settings.pingInterval
+	local best, bestAt
+	for _, key in ipairs(Data.Visible()) do
+		if not pending[key] then
+			local at = lastCheck[key]
+			if not at then return key end
+			if now - at >= interval and (not bestAt or at < bestAt) then best, bestAt = key, at end
+		end
+	end
+	return best
+end
+
+local function MaybeSummary(now)
+	if Notify.ready or not loginAt then return end
+	local done = true
+	for _, key in ipairs(Data.Visible()) do
+		if Data.status[key] == nil then done = false break end
+	end
+	if done or now - loginAt >= SUMMARY_MAX_WAIT then Notify.Summary() end
+end
+
+local function Tick()
+	if not ns.db then return end
+	local now = GetTime()
+
+	-- unanswered pings: they're online
+	for key, at in pairs(pending) do
+		if now - at >= TIMEOUT then
+			pending[key] = nil
+			if Presence.probe[key] then
+				Presence.probe[key] = nil
+				ns.Print("%s: online (no error within %ds).", key, TIMEOUT)
+			end
+			if Data.Has(key) then
+				ns.Debug("%s is online (no error)", key)
+				Data.SetStatus(key, "online")
+			end
+		end
+	end
+
+	MaybeSummary(now)
+
+	if not readyAt or now < readyAt then return end
+	local can, why = Comm.CanSend()
+	if not can then Pause(why) return end
+	if pausedReason then
+		ns.Debug("pings resumed")
+		pausedReason = nil
+		ns.Fire("PAUSE_CHANGED")
+	end
+
+	local key = NextFriend(now)
+	if not key then return end
+	lastCheck[key] = now
+	if Comm.Ping(key) then
+		pending[key] = now
+		ns.Debug("ping %s", key)
+	end
+end
+
+ns.Listen("LOGIN", function()
+	loginAt = GetTime()
+	C_Timer.NewTicker(TICK, Tick)
+end)
+
+-- wait a moment after every loading screen
+ns.On("PLAYER_ENTERING_WORLD", function()
+	readyAt = GetTime() + 3
+	wipe(pending)
+end)
+
+ns.Listen("FRIENDS_CHANGED", function(key, what)
+	if what == "added" then lastCheck[key] = nil end
+	if what == "removed" then pending[key] = nil lastCheck[key] = nil end
+end)
+
+--------------------------------------------------------------------------------
+-- Passive signals
+--------------------------------------------------------------------------------
+
+local function SeenName(name)
+	local key = Data.Normalize(Safe.Value(name))
+	if key and Data.Has(key) then
+		pending[key] = nil
+		Data.Seen(key)
+	end
+end
+
+for _, event in ipairs({
+	"CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_EMOTE",
+	"CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID",
+	"CHAT_MSG_RAID_LEADER", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER", "CHAT_MSG_CHANNEL",
+}) do
+	ns.On(event, function(_, sender) SeenName(sender) end)
+end
+
+local function SeenUnit(unit)
+	local key = Data.KeyFromUnit(unit)
+	if not (key and Data.Has(key)) then return end
+	if Safe.Call(UnitIsConnected, unit) == false then return end
+	local info = Data.InfoFromUnit(unit)
+	if info then Data.UpdateInfo(key, info.class, info.level, nil) end
+	pending[key] = nil
+	Data.Seen(key)
+end
+
+ns.On("PLAYER_TARGET_CHANGED", function() SeenUnit("target") end)
+ns.On("UPDATE_MOUSEOVER_UNIT", function() SeenUnit("mouseover") end)
+ns.On("GROUP_ROSTER_UPDATE", function()
+	if Safe.Call(IsInRaid) then
+		for i = 1, 40 do SeenUnit("raid" .. i) end
+	else
+		for i = 1, 4 do SeenUnit("party" .. i) end
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Who (only from a click: the game requires a hardware event)
+--------------------------------------------------------------------------------
+
+local whoKey, whoAt
+
+function Presence.Who(key)
+	if not (C_FriendList and C_FriendList.SendWho) then
+		ns.Print("/who isn't available.")
+		return
+	end
+	whoKey, whoAt = key, GetTime()
+	local filter = ('n-"%s"'):format(Data.ShortName(key))
+	local origin = Enum and Enum.SocialWhoOrigin and Enum.SocialWhoOrigin.Social
+	local ok, err = pcall(C_FriendList.SendWho, filter, origin)
+	if not ok then
+		whoKey = nil
+		ns.Print("Couldn't send /who: %s", tostring(err))
+	end
+end
+
+ns.On("WHO_LIST_UPDATE", function()
+	if not whoKey or GetTime() - whoAt > 15 then whoKey = nil return end
+	local key = whoKey
+	whoKey = nil
+	local n = Safe.Call(C_FriendList.GetNumWhoResults) or 0
+	for i = 1, n do
+		local info = Safe.Call(C_FriendList.GetWhoInfo, i)
+		if type(info) == "table" and Data.Normalize(Safe.Value(info.fullName)) == key then
+			Data.UpdateInfo(key, Safe.Value(info.filename), Safe.Value(info.level), Safe.Value(info.area))
+			pending[key] = nil
+			Data.SetStatus(key, "online")
+			return
+		end
+	end
+	Data.SetStatus(key, "offline")
+end)
+
+--------------------------------------------------------------------------------
+-- Debug: /ofl ping <name>
+--------------------------------------------------------------------------------
+
+function Presence.PingNow(key)
+	local can, why = Comm.CanSend()
+	if not can then ns.Print("Can't ping now (%s).", why) return end
+	lastCheck[key] = GetTime()
+	if Comm.Ping(key) then
+		pending[key] = GetTime()
+		Presence.probe[key] = true
+		ns.Print("Pinged %s; result in a few seconds.", key)
+	else
+		ns.Print("The ping to %s didn't go out.", key)
+	end
+end

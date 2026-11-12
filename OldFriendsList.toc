@@ -1,0 +1,23 @@
+## Interface: 16001
+## Title: Old Friends List
+## Notes: A classic, character-based friends list: add characters, see who's online, whisper and invite.
+## Author: paulohva
+## Version: @project-version@
+## X-License: MIT
+## X-Website: https://github.com/paulohva/OldFriendsList
+## SavedVariables: OldFriendsListDB
+## IconTexture: Interface\AddOns\OldFriendsList\Media\Icon
+## AddonCompartmentFunc: OldFriendsList_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: OldFriendsList_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: OldFriendsList_OnAddonCompartmentLeave
+
+Core.lua
+Data.lua
+Notify.lua
+Comm.lua
+Presence.lua
+Menus.lua
+UI\Row.xml
+UI\MainFrame.lua
+Minimap.lua
+Slash.lua

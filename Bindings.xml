@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="OLDFRIENDSLIST_TOGGLE" header="OLDFRIENDSLIST" category="ADDONS">
+		OldFriendsList_Toggle()
+	</Binding>
+</Bindings>
