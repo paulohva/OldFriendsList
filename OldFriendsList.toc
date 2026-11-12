@@ -20,4 +20,5 @@ Menus.lua
 UI\Row.xml
 UI\MainFrame.lua
 Minimap.lua
+Settings.lua
 Slash.lua

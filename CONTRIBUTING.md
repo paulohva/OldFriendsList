@@ -34,6 +34,8 @@ Open an issue and include:
 | `Comm.lua` | Addon messages between players (`PING` / `PONG`) |
 | `Presence.lua` | The check scheduler, the hidden "No player named" filter, passive signals, `/who` |
 | `Menus.lua` | Right-click menu entries |
+| `Minimap.lua` | The minimap button |
+| `Settings.lua` | The options panel and the default key binding (Shift-O) |
 | `UI/` | The main window (`MainFrame.lua`) and its row template (`Row.xml`) |
 | `Slash.lua` | `/ofl` commands |
 

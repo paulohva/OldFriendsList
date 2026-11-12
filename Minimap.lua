@@ -45,6 +45,8 @@ local function ShowTooltip(self)
 	GameTooltip:AddLine("Left-click: open the list", 0.5, 0.5, 0.5)
 	GameTooltip:AddLine("Right-click: options", 0.5, 0.5, 0.5)
 	GameTooltip:AddLine("Drag: move this button", 0.5, 0.5, 0.5)
+	local key = ns.Options.KeyText()
+	if key then GameTooltip:AddLine(key .. ": open the list", 0.5, 0.5, 0.5) end
 	GameTooltip:Show()
 end
 
@@ -63,6 +65,7 @@ local function OpenOptions(self)
 		root:CreateCheckbox("Login sound", Is("sound"), Toggle("sound"))
 		root:CreateCheckbox("Share my zone with friends", Is("shareZone"), Toggle("shareZone"))
 		root:CreateDivider()
+		root:CreateButton("Settings and key binding...", function() ns.Options.Open() end)
 		root:CreateButton("Hide minimap button", function() MinimapButton.SetShown(false) end)
 	end)
 end
@@ -109,11 +112,12 @@ local function Build()
 	SetAngle(ns.db.settings.minimapAngle or 210)
 end
 
-function MinimapButton.SetShown(show)
+-- quiet: no chat message (when toggled from the options panel)
+function MinimapButton.SetShown(show, quiet)
 	ns.db.settings.minimapHidden = not show
 	if show and not button then Build() end
 	if button then button:SetShown(show) end
-	if not show then ns.Print("minimap button hidden. /ofl minimap brings it back.") end
+	if not show and not quiet then ns.Print("minimap button hidden. /ofl minimap brings it back.") end
 end
 
 ns.Listen("LOGIN", function()

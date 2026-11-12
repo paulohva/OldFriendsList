@@ -28,8 +28,12 @@ It works with any character, whether or not they use the addon.
   their level, class and zone.
 - **Minimap button.** Hover it to see who's online, click it to open the list, right-click it for
   quick settings, and drag it anywhere around the minimap.
+- **Keyboard shortcut.** Press **Shift-O** to open the list. You can change it in
+  *Options → AddOns → Old Friends List*.
+- **Options panel.** Notifications, sound, zone sharing, check interval, minimap button and the
+  key binding, all in *Options → AddOns → Old Friends List*.
 - **Blizzard look and feel.** A native-style window that closes with Escape. You can also open it
-  from a key binding, the addon compartment, or a button under the Friends window.
+  from the addon compartment, or a button under the Friends window.
 
 ## Installation
 
@@ -42,8 +46,11 @@ It works with any character, whether or not they use the addon.
 
 ## Usage
 
-Type `/ofl` (or `/oldfriends`) to open the list. You can also set a key binding under
-*Key Bindings → AddOns → Old Friends List*.
+Press **Shift-O**, or type `/ofl` (or `/oldfriends`), to open the list.
+
+**Shift-O** is set for you the first time you log in, but only if that key isn't already used for
+something else. To pick another key, open *Options → AddOns → Old Friends List* (or type
+`/ofl config`) and click the key binding. The same panel has all the other settings.
 
 | Command | What it does |
 |---|---|
@@ -52,12 +59,13 @@ Type `/ofl` (or `/oldfriends`) to open the list. You can also set a key binding 
 | `/ofl remove <first last>` | Remove a character |
 | `/ofl note <first last> <text>` | Set a note; leave the text out to clear it |
 | `/ofl list` | Print your list in chat |
-| `/ofl config` | Show your settings |
+| `/ofl config` | Open the options panel (settings and key binding) |
+| `/ofl status` | Print your settings in chat |
 | `/ofl online on\|off` | Turn "has come online" messages on or off |
 | `/ofl offline on\|off` | Turn "has gone offline" messages on or off |
 | `/ofl sound on\|off` | Turn the login sound on or off |
 | `/ofl zone on\|off` | Turn sharing your zone with friends who use the addon on or off |
-| `/ofl interval <seconds>` | Set how often each friend is checked (15–600, default 30) |
+| `/ofl interval <seconds>` | Set how often each friend is checked (15–300, default 30) |
 | `/ofl minimap` | Show or hide the minimap button |
 | `/ofl ping <first last>` | Check one character right now and print the result |
 | `/ofl diag` | Show which game features this client supports (handy for bug reports) |

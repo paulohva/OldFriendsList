@@ -14,9 +14,10 @@ local function Help()
 	print("  /ofl remove <first last> - remove a character")
 	print("  /ofl note <first last> <text> - set a note (no text clears it)")
 	print("  /ofl list - print the list with who's online")
-	print("  /ofl config - show settings")
+	print("  /ofl config - open the options (settings and key binding)")
+	print("  /ofl status - print your settings in chat")
 	print("  /ofl online|offline|sound|zone on|off - toggle notifications / sound / sharing your zone")
-	print("  /ofl interval <seconds> - how often each friend is checked (15-600)")
+	print("  /ofl interval <seconds> - how often each friend is checked (15-300)")
 	print("  /ofl minimap - show or hide the minimap button")
 	print("  /ofl ping <name> - check one character now and print the result")
 	print("  /ofl diag - check which game APIs this client has")
@@ -28,6 +29,7 @@ local function Config()
 	ns.Print("settings:")
 	print(("  online messages: %s   offline messages: %s   sound: %s"):format(OnOff(s.notifyOnline), OnOff(s.notifyOffline), OnOff(s.sound)))
 	print(("  share zone with friends: %s   check interval: %ds   debug: %s"):format(OnOff(s.shareZone), s.pingInterval, OnOff(s.debug)))
+	print("  key to open the list: " .. (ns.Options.KeyText() or "none (set one with /ofl config)"))
 	local paused = Presence.PausedReason()
 	if paused then print("  checks paused: " .. paused) end
 end
@@ -109,7 +111,9 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		ns.Print(text ~= "" and "Note set for %s." or "Note cleared for %s.", Data.Display(key))
 	elseif cmd == "list" then
 		List()
-	elseif cmd == "config" or cmd == "settings" then
+	elseif cmd == "config" or cmd == "settings" or cmd == "options" then
+		if not ns.Options.Open() then Config() end
+	elseif cmd == "status" then
 		Config()
 	elseif cmd == "online" then
 		SetToggle("notifyOnline", "online messages", rest)
@@ -126,7 +130,7 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		SetToggle("debug", "debug", rest)
 	elseif cmd == "interval" then
 		local n = tonumber(rest)
-		if not n or n < 15 or n > 600 then ns.Print("interval must be 15 to 600 seconds.") return end
+		if not n or n < 15 or n > 300 then ns.Print("interval must be 15 to 300 seconds.") return end
 		ns.db.settings.pingInterval = math.floor(n)
 		ns.Print("each friend is checked every %d seconds.", ns.db.settings.pingInterval)
 	elseif cmd == "ping" then

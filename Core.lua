@@ -10,6 +10,8 @@ ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
 
 local DB_VERSION = 1
+ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)
+ns.DEFAULT_KEY = "SHIFT-O"
 local DEFAULTS = {
 	notifyOnline = true,
 	notifyOffline = false,
@@ -18,6 +20,7 @@ local DEFAULTS = {
 	shareZone = true,        -- tell friends who also use the addon where you are
 	debug = false,
 }
+ns.DEFAULTS = DEFAULTS
 
 --------------------------------------------------------------------------------
 -- Printing
