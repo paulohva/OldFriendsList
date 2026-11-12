@@ -13,8 +13,11 @@ All notable changes to Old Friends List are listed here.
 - A small gear in the list window's top-right corner opens the options panel.
 - `/ofl config` now opens the options panel; `/ofl status` prints your settings in chat.
 - `/ofl help` shows only the everyday commands; `/ofl advanced` shows them all.
+- The login summary now reads "Old Friends List: 2 friends online: [A], [B]".
+- "[Name] has gone offline." is now on by default (also when updating from 0.1.0). Turn it off
+  in the options panel or with `/ofl offline off`.
 - The minimap button's right-click menu has a shortcut to the options panel, and its tooltip
-  shows your key binding.
+  is shorter (just left-click and right-click).
 
 ## 0.1.0
 

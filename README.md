@@ -21,8 +21,8 @@ It works with any character, whether or not they use the addon.
   zone, and a "last seen" time for people who are offline.
 - **One-click actions.** Double-click a friend to whisper them. Use the buttons or the right-click
   menu to **Invite**, **Who**, **Set Note** or **Remove**.
-- **Login notifications.** A chat line and a sound when a friend comes online, plus one summary
-  line after you log in. You can also turn on offline messages.
+- **Login and logout notifications.** A chat line and a sound when a friend comes online, a chat
+  line when they go offline, and one summary line after you log in.
 - **Notes.** Keep a short note on each friend ("great tank, met in Gnomeregan").
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
   their level, class and zone.

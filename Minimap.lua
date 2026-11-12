@@ -44,9 +44,6 @@ local function ShowTooltip(self)
 	GameTooltip:AddLine(" ")
 	GameTooltip:AddLine("Left-click: open the list", 0.5, 0.5, 0.5)
 	GameTooltip:AddLine("Right-click: options", 0.5, 0.5, 0.5)
-	GameTooltip:AddLine("Drag: move this button", 0.5, 0.5, 0.5)
-	local key = ns.Options.KeyText()
-	if key then GameTooltip:AddLine(key .. ": open the list", 0.5, 0.5, 0.5) end
 	GameTooltip:Show()
 end
 

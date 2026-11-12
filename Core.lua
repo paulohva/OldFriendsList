@@ -9,12 +9,12 @@ ns.PREFIX = "OFL"            -- addon message prefix
 ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
 
-local DB_VERSION = 1
+local DB_VERSION = 2
 ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)
 ns.DEFAULT_KEY = "SHIFT-O"
 local DEFAULTS = {
 	notifyOnline = true,
-	notifyOffline = false,
+	notifyOffline = true,
 	sound = true,
 	pingInterval = 30,       -- seconds between checks of the same friend
 	shareZone = true,        -- tell friends who also use the addon where you are
@@ -127,6 +127,12 @@ ns.On("ADDON_LOADED", function(name)
 	OldFriendsListDB = OldFriendsListDB or {}
 	local db = OldFriendsListDB
 	db.version = db.version or DB_VERSION
+	db.settings = db.settings or {}
+	-- 0.2.0: offline messages are on by default, also for people coming from 0.1.0
+	if db.version < 2 then
+		db.settings.notifyOffline = true
+		db.version = 2
+	end
 	db.friends = db.friends or {}
 	db.settings = db.settings or {}
 	for k, v in pairs(DEFAULTS) do

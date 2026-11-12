@@ -57,7 +57,7 @@ function Notify.Summary()
 		if Data.status[key] == "online" then names[#names + 1] = PlayerLink(key) end
 	end
 	if #names > 0 and ns.db.settings.notifyOnline then
-		SystemLine(("Old Friends online: %s"):format(table.concat(names, ", ")))
+		ns.Print("%d %s online: %s", #names, #names == 1 and "friend" or "friends", table.concat(names, ", "))
 	end
 end
 
