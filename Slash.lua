@@ -108,6 +108,7 @@ local function Diag()
 				tostring(Data.KeyFromUnit(unit))))
 		end
 	end
+	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
 	local can, why = ns.Comm.CanSend()
 	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))
 end

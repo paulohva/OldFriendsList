@@ -108,6 +108,9 @@ if locale == "ptBR" then
 	L["Show a message in chat when a friend logs out."] = "Mostra um aviso no chat quando um amigo sai do jogo."
 	L["Play a sound when a friend comes online."] = "Toca um som quando um amigo fica online."
 	L["Show minimap button"] = "Mostrar botão no minimapa"
+	L["Show in the Social window"] = "Mostrar na janela de amigos"
+	L["Adds an Old Friends List tab under the tabs of the game's Social window (O)."] =
+		"Acrescenta uma aba da Old Friends List por baixo das abas da janela de amigos do jogo (O)."
 	L["Show the Old Friends List button around the minimap."] = "Mostra o botão da Old Friends List ao redor do minimapa."
 	L["Share my zone with friends"] = "Compartilhar minha zona com amigos"
 	L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."] =

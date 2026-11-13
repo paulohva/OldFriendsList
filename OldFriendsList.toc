@@ -20,6 +20,7 @@ Presence.lua
 Menus.lua
 UI\Row.xml
 UI\MainFrame.lua
+UI\SocialTab.lua
 Minimap.lua
 Settings.lua
 Slash.lua

@@ -158,6 +158,9 @@ local function Build()
 
 	Try(AddHeader, layout, L["General"])
 	Try(AddMinimapCheckbox)
+	Try(AddCheckbox, "socialIcon", L["Show in the Social window"],
+		L["Adds an Old Friends List tab under the tabs of the game's Social window (O)."],
+		function() if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end end)
 	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
 		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
 	Try(AddIntervalSlider)

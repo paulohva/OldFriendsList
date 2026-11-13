@@ -11,6 +11,9 @@ All notable changes to Old Friends List are listed here.
 - **Options panel** in *Options → AddOns → Old Friends List*: change the key binding, and turn
   notifications, sound, zone sharing, the check interval and the minimap button on or off.
 - A small gear in the list window's top-right corner opens the options panel.
+- The big "Old Friends" button under the Social window is replaced by an optional **tab** under
+  the side tabs of Forever's Social window (O), styled like them. It's off by default; turn on
+  "Show in the Social window" in the options.
 - `/ofl config` now opens the options panel; `/ofl status` prints your settings in chat.
 - `/ofl help` shows only the everyday commands; `/ofl advanced` shows them all.
 - The login summary now reads "Old Friends List: 2 friends online: [A], [B]".

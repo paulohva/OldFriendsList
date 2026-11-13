@@ -9,7 +9,7 @@ ns.PREFIX = "OFL"            -- addon message prefix
 ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
 
-local DB_VERSION = 2
+local DB_VERSION = 3
 ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)
 ns.DEFAULT_KEY = "SHIFT-O"
 local DEFAULTS = {
@@ -20,6 +20,7 @@ local DEFAULTS = {
 	shareZone = true,        -- tell friends who also use the addon where you are
 	showDetails = true,      -- list: level, class and zone under each name
 	classColors = false,     -- names in class colors (list, tooltips, chat)
+	socialIcon = false,      -- icon in the game's Social window that opens the list (opt-in)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
@@ -134,6 +135,11 @@ ns.On("ADDON_LOADED", function(name)
 	if db.version < 2 then
 		db.settings.notifyOffline = true
 		db.version = 2
+	end
+	-- the Social window icon is opt-in (test builds had it on)
+	if db.version < 3 then
+		db.settings.socialIcon = false
+		db.version = 3
 	end
 	db.friends = db.friends or {}
 	db.settings = db.settings or {}

@@ -431,18 +431,3 @@ end
 
 function OldFriendsList_OnAddonCompartmentLeave() GameTooltip:Hide() end
 
-ns.Listen("LOGIN", function()
-	if not FriendsFrame then return end
-	local b = CreateFrame("Button", nil, FriendsFrame, "UIPanelButtonTemplate")
-	b:SetSize(104, 22)
-	b:SetText("Old Friends")
-	b:SetPoint("TOPRIGHT", FriendsFrame, "BOTTOMRIGHT", 0, 2)
-	b:SetScript("OnClick", UI.Toggle)
-	b:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine(ns.NAME)
-		GameTooltip:AddLine(L["Your list of characters, the classic way."], 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-end)
