@@ -30,10 +30,19 @@ It works with any character, whether or not they use the addon.
   quick settings, and drag it anywhere around the minimap.
 - **Keyboard shortcut.** Press **Shift-O** to open the list. You can change it in
   *Options → AddOns → Old Friends List*.
-- **Options panel.** Notifications, sound, zone sharing, check interval, minimap button and the
-  key binding, all in *Options → AddOns → Old Friends List*.
+- **Options panel.** Level and zone in the list, class colors, notifications, sound, zone
+  sharing, check interval, minimap button and the key binding, all in
+  *Options → AddOns → Old Friends List*.
 - **Blizzard look and feel.** A native-style window that closes with Escape. You can also open it
   from the addon compartment, or a button under the Friends window.
+
+## Languages
+
+Old Friends List follows your game client's language. It includes **English** and
+**Português (Brasil)**; other languages fall back to English, except for the texts the game
+already translates (buttons like Whisper and Invite, "Level 23 Warrior", the "has come online"
+message), which always match your client. Translations are welcome; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Installation
 

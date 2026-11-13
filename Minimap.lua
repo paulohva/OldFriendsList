@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 local _, ns = ...
-local Data = ns.Data
+local Data, L = ns.Data, ns.L
 
 local MinimapButton = {}
 ns.MinimapButton = MinimapButton
@@ -31,7 +31,7 @@ local function ShowTooltip(self)
 	GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 	GameTooltip:AddLine(ns.NAME)
 	local online, total = Data.CountOnline()
-	GameTooltip:AddLine(("%d of %d online"):format(online, total), 1, 1, 1)
+	GameTooltip:AddLine(L["%d of %d online"]:format(online, total), 1, 1, 1)
 	local shown = 0
 	for _, key in ipairs(Data.Sorted()) do
 		if Data.status[key] ~= "online" then break end
@@ -42,8 +42,8 @@ local function ShowTooltip(self)
 		GameTooltip:AddDoubleLine(Data.Display(key), f.lastZone or "", c and c.r or 1, c and c.g or 1, c and c.b or 1, 0.7, 0.7, 0.7)
 	end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine("Left-click: open the list", 0.5, 0.5, 0.5)
-	GameTooltip:AddLine("Right-click: options", 0.5, 0.5, 0.5)
+	GameTooltip:AddLine(L["Left-click: open the list"], 0.5, 0.5, 0.5)
+	GameTooltip:AddLine(L["Right-click: options"], 0.5, 0.5, 0.5)
 	GameTooltip:Show()
 end
 
@@ -54,16 +54,16 @@ local function OpenOptions(self)
 	local function Is(field) return function() return s[field] end end
 	MenuUtil.CreateContextMenu(self, function(_, root)
 		root:CreateTitle(ns.NAME)
-		root:CreateButton("Open the list", function() ns.UI.Toggle() end)
-		root:CreateButton("Add a friend...", function() ns.Actions.AddPrompt() end)
+		root:CreateButton(L["Open the list"], function() ns.UI.Toggle() end)
+		root:CreateButton(L["Add a friend..."], function() ns.Actions.AddPrompt() end)
 		root:CreateDivider()
-		root:CreateCheckbox("Online messages", Is("notifyOnline"), Toggle("notifyOnline"))
-		root:CreateCheckbox("Offline messages", Is("notifyOffline"), Toggle("notifyOffline"))
-		root:CreateCheckbox("Login sound", Is("sound"), Toggle("sound"))
-		root:CreateCheckbox("Share my zone with friends", Is("shareZone"), Toggle("shareZone"))
+		root:CreateCheckbox(L["Online messages"], Is("notifyOnline"), Toggle("notifyOnline"))
+		root:CreateCheckbox(L["Offline messages"], Is("notifyOffline"), Toggle("notifyOffline"))
+		root:CreateCheckbox(L["Login sound"], Is("sound"), Toggle("sound"))
+		root:CreateCheckbox(L["Share my zone with friends"], Is("shareZone"), Toggle("shareZone"))
 		root:CreateDivider()
-		root:CreateButton("Settings and key binding...", function() ns.Options.Open() end)
-		root:CreateButton("Hide minimap button", function() MinimapButton.SetShown(false) end)
+		root:CreateButton(L["Settings and key binding..."], function() ns.Options.Open() end)
+		root:CreateButton(L["Hide minimap button"], function() MinimapButton.SetShown(false) end)
 	end)
 end
 
@@ -114,7 +114,7 @@ function MinimapButton.SetShown(show, quiet)
 	ns.db.settings.minimapHidden = not show
 	if show and not button then Build() end
 	if button then button:SetShown(show) end
-	if not show and not quiet then ns.Print("minimap button hidden. /ofl minimap brings it back.") end
+	if not show and not quiet then ns.Print(L["Minimap button hidden. /ofl minimap brings it back."]) end
 end
 
 ns.Listen("LOGIN", function()

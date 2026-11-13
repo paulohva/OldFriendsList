@@ -16,6 +16,21 @@ All notable changes to Old Friends List are listed here.
 - The login summary now reads "Old Friends List: 2 friends online: [A], [B]".
 - "[Name] has gone offline." is now on by default (also when updating from 0.1.0). Turn it off
   in the options panel or with `/ofl offline off`.
+- The list shows each friend's level and class also while they're offline (the last known), like
+  the classic list.
+- New **List** options: **Show level and zone** (on by default; off shows only names, in a more
+  compact list) and **Class colors** (off by default; names in their class color in the list,
+  tooltips and chat).
+- Level and class are picked up more reliably from your group, target and mouseover, and a
+  friend's level updates when they level up in your group.
+- **Fix:** the window couldn't be closed with its X button during combat.
+- **Fix:** **Who** on a friend didn't update their level, class and zone when the game showed the
+  answer in chat (which it does for small results). It now reads that line, in any language.
+- **Languages:** the addon follows the game client's language. English and Portuguese (Brazil)
+  are included; texts the game already translates (Whisper, Invite, "Level 23 Warrior", the
+  classic "[Name] has come online.") come straight from the game.
+- The options panel can't open in combat; the gear and `/ofl config` now say so instead of
+  doing nothing.
 - The minimap button's right-click menu has a shortcut to the options panel, and its tooltip
   is shorter (just left-click and right-click).
 

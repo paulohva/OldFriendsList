@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 local _, ns = ...
-local Safe = ns.Safe
+local Safe, L = ns.Safe, ns.L
 
 local Options = {}
 ns.Options = Options
@@ -43,14 +43,14 @@ local function OfferDefaultKey()
 	local keyText = PrettyKey(ns.DEFAULT_KEY)
 	if action and action ~= "" then
 		local actionName = (GetBindingName and GetBindingName(action)) or action
-		ns.Print("%s is already used for \"%s\", so no key opens the list yet. Pick one in Options > AddOns > Old Friends List.",
+		ns.Print(L["%s is already used for \"%s\", so no key opens the list yet. Pick one in Options > AddOns > Old Friends List."],
 			keyText, actionName)
 		return
 	end
 	local ok = pcall(SetBinding, ns.DEFAULT_KEY, ns.BINDING)
 	if ok and GetCurrentBindingSet and SaveBindings then pcall(SaveBindings, GetCurrentBindingSet()) end
 	if ok then
-		ns.Print("Press %s to open your list. You can change it in Options > AddOns > Old Friends List.", keyText)
+		ns.Print(L["Press %s to open your list. You can change it in Options > AddOns > Old Friends List."], keyText)
 	end
 end
 
@@ -68,29 +68,42 @@ local function VarType(kind)
 	return kind
 end
 
-local function AddCheckbox(key, name, tooltip)
-	local setting = Settings.RegisterAddOnSetting(category, "OldFriendsList_" .. key, key, ns.db.settings,
+-- onChange: called after the player flips it (e.g. to redraw the list)
+local function AddCheckbox(key, name, tooltip, onChange)
+	local variable = "OldFriendsList_" .. key
+	local setting = Settings.RegisterAddOnSetting(category, variable, key, ns.db.settings,
 		VarType("boolean"), name, ns.DEFAULTS[key])
 	Settings.CreateCheckbox(category, setting, tooltip)
+	if onChange then
+		if setting.SetValueChangedCallback then
+			setting:SetValueChangedCallback(function() onChange() end)
+		elseif Settings.SetOnValueChangedCallback then
+			Settings.SetOnValueChangedCallback(variable, function() onChange() end)
+		end
+	end
+end
+
+local function RefreshList()
+	if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
 local function AddMinimapCheckbox()
 	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_minimap", VarType("boolean"),
-		"Show minimap button", true,
+		L["Show minimap button"], true,
 		function() return not ns.db.settings.minimapHidden end,
 		function(value) ns.MinimapButton.SetShown(value, true) end)
-	Settings.CreateCheckbox(category, setting, "Show the Old Friends List button around the minimap.")
+	Settings.CreateCheckbox(category, setting, L["Show the Old Friends List button around the minimap."])
 end
 
 local function AddIntervalSlider()
 	local setting = Settings.RegisterAddOnSetting(category, "OldFriendsList_pingInterval", "pingInterval",
-		ns.db.settings, VarType("number"), "Check interval", ns.DEFAULTS.pingInterval)
+		ns.db.settings, VarType("number"), L["Check interval"], ns.DEFAULTS.pingInterval)
 	local options = Settings.CreateSliderOptions(15, 300, 5)
 	if MinimalSliderWithSteppersMixin and MinimalSliderWithSteppersMixin.Label then
 		options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(v) return ("%d s"):format(v) end)
 	end
 	Settings.CreateSlider(category, setting, options,
-		"How often each friend is checked. Lower is faster to notice logins; friends who use the addon are always instant.")
+		L["How often each friend is checked. Lower is faster to notice logins; friends who use the addon are always instant."])
 end
 
 local function AddHeader(layout, text)
@@ -109,9 +122,9 @@ local function AddKeybinding(layout)
 	end
 	-- older settings UI: send people to the game's Key Bindings instead
 	if CreateSettingsButtonInitializer then
-		layout:AddInitializer(CreateSettingsButtonInitializer("Toggle Old Friends List", "Key Bindings",
+		layout:AddInitializer(CreateSettingsButtonInitializer(L["Toggle Old Friends List"], ns.G("KEY_BINDINGS", "Key Bindings"),
 			function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
-			"Set the key under Key Bindings > AddOns > Old Friends List.", true))
+			L["Set the key under Key Bindings > AddOns > Old Friends List."], true))
 	end
 end
 
@@ -129,18 +142,24 @@ local function Build()
 		if not ok then ns.Debug("settings: %s", tostring(err)) end
 	end
 
-	Try(AddHeader, layout, "Key Binding")
+	Try(AddHeader, layout, L["Key Binding"])
 	Try(AddKeybinding, layout)
 
-	Try(AddHeader, layout, "Notifications")
-	Try(AddCheckbox, "notifyOnline", "Online messages", "Print \"[Name] has come online.\" in chat when a friend logs in.")
-	Try(AddCheckbox, "notifyOffline", "Offline messages", "Print \"[Name] has gone offline.\" in chat when a friend logs out.")
-	Try(AddCheckbox, "sound", "Login sound", "Play a sound when a friend comes online.")
+	Try(AddHeader, layout, L["List"])
+	Try(AddCheckbox, "showDetails", L["Show level and zone"],
+		L["Show each friend's level, class and zone under their name. Turn it off to show only names."], RefreshList)
+	Try(AddCheckbox, "classColors", L["Class colors"],
+		L["Show friends' names in their class color, in the list, tooltips and chat messages."], RefreshList)
 
-	Try(AddHeader, layout, "General")
+	Try(AddHeader, layout, L["Notifications"])
+	Try(AddCheckbox, "notifyOnline", L["Online messages"], L["Show a message in chat when a friend logs in."])
+	Try(AddCheckbox, "notifyOffline", L["Offline messages"], L["Show a message in chat when a friend logs out."])
+	Try(AddCheckbox, "sound", L["Login sound"], L["Play a sound when a friend comes online."])
+
+	Try(AddHeader, layout, L["General"])
 	Try(AddMinimapCheckbox)
-	Try(AddCheckbox, "shareZone", "Share my zone with friends",
-		"Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it.")
+	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
+		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
 	Try(AddIntervalSlider)
 
 	Settings.RegisterAddOnCategory(category)
@@ -151,6 +170,10 @@ ns.Listen("DB_READY", Build)
 -- opens the panel; false when this client has no options panel for addons
 function Options.Open()
 	if not (category and Settings and Settings.OpenToCategory) then return false end
+	if Safe.InCombat() then
+		ns.Print(L["The options can't be opened in combat. Try again after the fight."])
+		return true
+	end
 	local id = category.GetID and category:GetID() or category.ID
 	return pcall(Settings.OpenToCategory, id) and true or false
 end

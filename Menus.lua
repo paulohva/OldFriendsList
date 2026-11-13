@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 local _, ns = ...
-local Safe, Data = ns.Safe, ns.Data
+local Safe, Data, L = ns.Safe, ns.Data, ns.L
 
 local TAGS = {
 	"MENU_UNIT_TARGET",
@@ -40,15 +40,15 @@ local function Modify(_, root, contextData)
 
 	root:CreateDivider()
 	if Data.Has(key) then
-		root:CreateButton("Remove from Old Friends", function()
+		root:CreateButton(L["Remove from Old Friends"], function()
 			Data.Remove(key)
-			ns.Print("Removed %s.", Data.Display(key))
+			ns.Print(L["Removed %s."], Data.Display(key))
 		end)
 	else
-		root:CreateButton("Add to Old Friends", function()
+		root:CreateButton(L["Add to Old Friends"], function()
 			local added, err = Data.Add(key, info)
 			if added then
-				ns.Print("Added %s.", Data.Display(added))
+				ns.Print(L["Added %s."], Data.Display(added))
 			else
 				ns.Print(err)
 			end

@@ -12,6 +12,7 @@
 ## AddonCompartmentFuncOnLeave: OldFriendsList_OnAddonCompartmentLeave
 
 Core.lua
+Locales.lua
 Data.lua
 Notify.lua
 Comm.lua

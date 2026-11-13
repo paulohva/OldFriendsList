@@ -99,13 +99,13 @@ end
 function Data.Add(input, info)
 	local key = Data.Normalize(input)
 	if not key or not key:find(" ") then
-		return nil, "That's not a valid character name. Use the first and last name, e.g. Asha Brightvale."
+		return nil, ns.L["That's not a valid character name. Use the first and last name, e.g. Asha Brightvale."]
 	end
-	if key == Data.MyKey() then return nil, "You can't add yourself." end
-	if Data.Has(key) then return nil, ("%s is already on your list."):format(Data.Display(key)) end
+	if key == Data.MyKey() then return nil, ns.L["You can't add yourself."] end
+	if Data.Has(key) then return nil, ns.L["%s is already on your list."]:format(Data.Display(key)) end
 	local myFaction = Data.MyFaction()
 	if info and info.faction and myFaction and info.faction ~= myFaction then
-		return nil, ("%s is on the other faction: you can't whisper or invite them."):format(Data.Display(key))
+		return nil, ns.L["%s is on the other faction: you can't whisper or invite them."]:format(Data.Display(key))
 	end
 	ns.db.friends[key] = {
 		class = info and info.class,
@@ -202,31 +202,48 @@ end
 -- Display helpers
 --------------------------------------------------------------------------------
 
+-- class color for a name, or nil (the "Class colors" option is off, or the class is unknown)
 function Data.ClassColor(class)
+	if not (ns.db and ns.db.settings.classColors) then return nil end
 	local c = class and ((C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class))
 		or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]))
 	return c
 end
 
+-- class name in the game's language ("WARRIOR" -> "Warrior" / "Guerreiro")
+local CLASS_NAMES = { DEATHKNIGHT = "Death Knight", DEMONHUNTER = "Demon Hunter" }
 function Data.ClassName(class)
-	if not class then return nil end
-	return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]) or class:sub(1, 1) .. class:sub(2):lower()
+	if type(class) ~= "string" or class == "" then return nil end
+	local localized = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]
+	return localized or CLASS_NAMES[class] or (class:sub(1, 1) .. class:sub(2):lower())
 end
 
+-- "Level 23 Warrior" in the game's language (Blizzard's own friends list wording), or nil
+function Data.LevelClass(f)
+	local className = Data.ClassName(f.class)
+	if f.level and className then
+		return ns.G("FRIENDS_LEVEL_TEMPLATE", "Level %d %s"):format(f.level, className)
+	end
+	if f.level then return ns.L["Level %d"]:format(f.level) end
+	return className
+end
+
+-- "2 hours ago" (translated), or nil when never seen
 function Data.Ago(t)
-	if not t then return "never seen" end
+	if not t then return nil end
+	local L = ns.L
 	local d = time() - t
-	if d < 60 then return "just now" end
+	if d < 60 then return L["just now"] end
 	if d < 3600 then
 		local m = math.floor(d / 60)
-		return m == 1 and "1 minute ago" or m .. " minutes ago"
+		return m == 1 and L["1 minute ago"] or L["%d minutes ago"]:format(m)
 	end
 	if d < 86400 then
 		local h = math.floor(d / 3600)
-		return h == 1 and "1 hour ago" or h .. " hours ago"
+		return h == 1 and L["1 hour ago"] or L["%d hours ago"]:format(h)
 	end
 	local days = math.floor(d / 86400)
-	return days == 1 and "1 day ago" or days .. " days ago"
+	return days == 1 and L["1 day ago"] or L["%d days ago"]:format(days)
 end
 
 -- info table (class, level, faction) for a unit, or nil when not a player
@@ -240,10 +257,36 @@ function Data.InfoFromUnit(unit)
 	}
 end
 
--- key (full name) for a unit, or nil
+-- the friend whose first name is this, when exactly one matches
+local function FriendByFirstName(first)
+	local found
+	for key in pairs(ns.db.friends) do
+		if key:sub(1, #first + 1) == first .. " " then
+			if found then return nil end
+			found = key
+		end
+	end
+	return found
+end
+
+-- key (full name) for a unit, or nil. Tries every way the game names a unit; if one only
+-- gives a first name, it's matched to the single friend with that first name.
 function Data.KeyFromUnit(unit)
 	if not Safe.Call(UnitIsPlayer, unit) then return nil end
-	return Data.Normalize(Safe.Call(UnitName, unit))
+	local candidates = {
+		Safe.Call(UnitName, unit),
+		Safe.Call(GetUnitName, unit, true),
+		(Safe.CallAll(UnitFullName, unit)),
+	}
+	local single
+	for _, name in pairs(candidates) do
+		local key = Data.Normalize(name)
+		if key then
+			if key:find(" ") then return key end
+			single = single or key
+		end
+	end
+	return single and (FriendByFirstName(single) or single)
 end
 
 -- friends saved by an older version as "Name-Realm": drop the realm

@@ -18,6 +18,8 @@ local DEFAULTS = {
 	sound = true,
 	pingInterval = 30,       -- seconds between checks of the same friend
 	shareZone = true,        -- tell friends who also use the addon where you are
+	showDetails = true,      -- list: level, class and zone under each name
+	classColors = false,     -- names in class colors (list, tooltips, chat)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
