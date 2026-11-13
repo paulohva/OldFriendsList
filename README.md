@@ -6,7 +6,7 @@ Forever's friends system is account-based only: you add people, not characters. 
 brings back the old way. Add the *characters* you meet, see at a glance who's online, whisper or
 invite them with a click, and get the familiar yellow line in chat when one of them logs in:
 
-> **[Thrall]** has come online.
+> **[Asha Brightvale]** has come online.
 
 It works with any character, whether or not they use the addon.
 
@@ -15,21 +15,28 @@ It works with any character, whether or not they use the addon.
 ## Features
 
 - **A list of characters.** Add them by name, or right-click a player and choose
-  **Add to Old Friends**. This works on target and focus portraits, party and raid frames, names
-  in chat and the guild roster.
-- **Online status at a glance.** Each friend shows as online or offline, with level, class and
-  zone, and a "last seen" time for people who are offline.
-- **One-click actions.** Double-click a friend to whisper them. Use the buttons or the right-click
+  **Add to Old Friends**: on portraits, party and raid frames, names in chat and the guild roster.
+- **Online status at a glance.** Level, class and zone for each friend, and "last seen" with the
+  last known level and class for friends who are offline.
+- **One-click actions.** Double-click a friend to whisper them; use the buttons or the right-click
   menu to **Invite**, **Who**, **Set Note** or **Remove**.
-- **Login notifications.** A chat line and a sound when a friend comes online, plus one summary
-  line after you log in. You can also turn on offline messages.
-- **Notes.** Keep a short note on each friend ("great tank, met in Gnomeregan").
+- **Login and logout notifications.** A chat line and a sound when a friend comes online, a line
+  when they go offline, and one summary line after you log in.
+- **Shortcut and options.** **Shift-O** opens the list. The gear in the window (or `/ofl config`)
+  opens the options: level and zone in the list, class colors, notifications, minimap button and
+  the key binding.
+- **Minimap button.** Hover it to see who's online; click to open the list, right-click for quick
+  settings. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
   their level, class and zone.
-- **Minimap button.** Hover it to see who's online, click it to open the list, right-click it for
-  quick settings, and drag it anywhere around the minimap.
-- **Blizzard look and feel.** A native-style window that closes with Escape. You can also open it
-  from a key binding, the addon compartment, or a button under the Friends window.
+
+## Languages
+
+Old Friends List follows your game client's language. It includes **English** and
+**Português (Brasil)**; other languages fall back to English, except for the texts the game
+already translates (buttons like Whisper and Invite, "Level 23 Warrior", the "has come online"
+message), which always match your client. Translations are welcome; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Installation
 
@@ -42,42 +49,37 @@ It works with any character, whether or not they use the addon.
 
 ## Usage
 
-Type `/ofl` (or `/oldfriends`) to open the list. You can also set a key binding under
-*Key Bindings → AddOns → Old Friends List*.
+Press **Shift-O** or type `/ofl` to open the list. Shift-O is set on your first login if that key
+is free; change it in the options.
 
 | Command | What it does |
 |---|---|
 | `/ofl` | Open or close the list |
-| `/ofl add <first last>` | Add a character by first and last name, e.g. `/ofl add Asha Brightvale` |
+| `/ofl add <first last>` | Add a character, e.g. `/ofl add Asha Brightvale` |
 | `/ofl remove <first last>` | Remove a character |
 | `/ofl note <first last> <text>` | Set a note; leave the text out to clear it |
 | `/ofl list` | Print your list in chat |
-| `/ofl config` | Show your settings |
-| `/ofl online on\|off` | Turn "has come online" messages on or off |
-| `/ofl offline on\|off` | Turn "has gone offline" messages on or off |
-| `/ofl sound on\|off` | Turn the login sound on or off |
-| `/ofl zone on\|off` | Turn sharing your zone with friends who use the addon on or off |
-| `/ofl interval <seconds>` | Set how often each friend is checked (15–600, default 30) |
+| `/ofl config` | Open the options (settings and key binding) |
 | `/ofl minimap` | Show or hide the minimap button |
-| `/ofl ping <first last>` | Check one character right now and print the result |
-| `/ofl diag` | Show which game features this client supports (handy for bug reports) |
-| `/ofl debug` | Turn debug messages on or off |
+
+Type `/ofl advanced` in game for every command (notification toggles, check interval, `diag`,
+`debug`...).
 
 ## How it works
 
-WoW: Forever has no character friends list. Addons also can't send `/who` on their own: the game
-only allows `/who` when you click. So Old Friends List checks your friends differently:
+WoW: Forever has no character friends list, and addons can only send `/who` when you click. So
+Old Friends List checks your friends another way:
 
-1. **Silent check.** Every so often the addon sends each friend a tiny invisible addon message.
-   - If the friend is offline, the server replies *"No player named … is currently playing."*
-     The addon hides that reply and marks the friend offline.
-   - If no reply comes within a few seconds, the friend is online.
-2. **Handshake.** If your friend also runs Old Friends List, their addon answers straight away
-   with their level, class and zone. When they log in, their addon checks on you right away, so
-   you're notified within seconds.
-3. **What you see.** Chatting with a friend, grouping with them or targeting them also updates
-   their status.
+1. **Silent check.** The addon sends each friend a tiny invisible message every so often. If
+   they're offline, the server says so; the addon hides that reply and marks them offline. No
+   reply means they're online.
+2. **Handshake.** Friends who also run the addon answer straight away, and their addon tells
+   yours when they log in.
+3. **What you see.** Chatting, grouping with or targeting a friend also updates their status.
 4. **Who.** Right-click a friend and choose **Who** for a fresh `/who` on them.
+
+Level, class and zone come from your group, your target, a friend's addon or **Who**, and are
+remembered.
 
 ### Limitations
 
@@ -93,7 +95,7 @@ only allows `/who` when you click. So Old Friends List checks your friends diffe
 
 The only data the addon sends is the invisible check message and, between two players who both
 use the addon, their class, level and zone. Your zone is sent only to people who are on *your*
-list, and you can turn that off with `/ofl zone off`. Everything else stays in your local saved
+list, and you can turn that off in the options. Everything else stays in your local saved
 variables.
 
 ## Contributing

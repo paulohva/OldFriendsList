@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 local _, ns = ...
-local Safe, Data, Presence = ns.Safe, ns.Data, ns.Presence
+local Safe, Data, Presence, L, G = ns.Safe, ns.Data, ns.Presence, ns.L, ns.G
 
 local UI = {}
 ns.UI = UI
@@ -11,10 +11,11 @@ ns.UI = UI
 local ICON = ns.ICON
 local ONLINE_ICON = "Interface\\FriendsFrame\\StatusIcon-Online"
 local OFFLINE_ICON = "Interface\\FriendsFrame\\StatusIcon-Offline"
-local ROW_HEIGHT = 34
+local ROW_HEIGHT = 34          -- name + level/zone line
+local ROW_HEIGHT_COMPACT = 22  -- name only ("Show level and zone" off)
 local GREY = "|cff808080"
 
-local frame, scrollBox, dataProvider, onlineText, emptyText
+local frame, scrollBox, listView, dataProvider, onlineText, emptyText
 local whisperButton, inviteButton, removeButton
 local selectedKey
 
@@ -54,7 +55,7 @@ end
 function Actions.AddByName(text)
 	local key, err = Data.Add(text)
 	if key then
-		ns.Print("Added %s.", Data.Display(key))
+		ns.Print(L["Added %s."], Data.Display(key))
 		selectedKey = key
 	else
 		ns.Print(err)
@@ -71,9 +72,9 @@ local function EditBoxOf(dialog)
 end
 
 StaticPopupDialogs.OLDFRIENDSLIST_ADD = {
-	text = "Enter the first and last name of the character you want to add:",
-	button1 = ADD or "Add",
-	button2 = CANCEL or "Cancel",
+	text = L["Enter the first and last name of the character you want to add:"],
+	button1 = G("ADD", "Add"),
+	button2 = G("CANCEL", "Cancel"),
 	hasEditBox = true,
 	maxLetters = 60,
 	OnShow = function(self)
@@ -93,9 +94,9 @@ StaticPopupDialogs.OLDFRIENDSLIST_ADD = {
 }
 
 StaticPopupDialogs.OLDFRIENDSLIST_SET_NOTE = {
-	text = "Set a note for %s:",
-	button1 = ACCEPT or "Accept",
-	button2 = CANCEL or "Cancel",
+	text = L["Set a note for %s:"],
+	button1 = G("ACCEPT", "Accept"),
+	button2 = G("CANCEL", "Cancel"),
 	hasEditBox = true,
 	maxLetters = 120,
 	editBoxWidth = 260,
@@ -118,9 +119,9 @@ StaticPopupDialogs.OLDFRIENDSLIST_SET_NOTE = {
 }
 
 StaticPopupDialogs.OLDFRIENDSLIST_REMOVE = {
-	text = "Remove %s from your Old Friends List?",
-	button1 = YES or "Yes",
-	button2 = NO or "No",
+	text = L["Remove %s from your Old Friends List?"],
+	button1 = G("YES", "Yes"),
+	button2 = G("NO", "No"),
 	OnAccept = function(_, key)
 		Data.Remove(key)
 		if selectedKey == key then selectedKey = nil end
@@ -134,18 +135,19 @@ StaticPopupDialogs.OLDFRIENDSLIST_REMOVE = {
 
 local function InfoLine(key, f)
 	local online = Data.status[key] == "online"
-	local parts = {}
-	if f.level then parts[#parts + 1] = "Level " .. f.level end
-	local className = Data.ClassName(f.class)
-	if className then parts[#parts + 1] = className end
-	local who = table.concat(parts, " ")
+	local who = Data.LevelClass(f)
+	local prefix = who and (who .. " - ") or ""
 	if online then
 		local zone = f.lastZone
-		if who ~= "" and zone then return who .. " - " .. zone end
-		return (who ~= "" and who) or zone or "Online"
+		if who and zone then return who .. " - " .. zone end
+		return who or zone or L["Online"]
 	end
-	local status = Data.status[key] == nil and "Checking..." or "Offline"
-	return GREY .. status .. " - last seen " .. Data.Ago(f.lastSeen) .. "|r"
+	-- offline: the last known level and class, like the classic list
+	if Data.status[key] == nil then
+		return GREY .. prefix .. L["Checking..."] .. "|r"
+	end
+	local ago = Data.Ago(f.lastSeen)
+	return GREY .. prefix .. (ago and L["Offline, last seen %s"]:format(ago) or L["Offline"]) .. "|r"
 end
 
 local function ShowTooltip(row)
@@ -156,24 +158,23 @@ local function ShowTooltip(row)
 	local c = Data.ClassColor(f.class)
 	GameTooltip:AddLine(Data.Display(key), c and c.r or 1, c and c.g or 0.82, c and c.b or 0)
 	local online = Data.status[key] == "online"
-	local desc = {}
-	if f.level then desc[#desc + 1] = "Level " .. f.level end
-	if f.class then desc[#desc + 1] = Data.ClassName(f.class) end
-	if #desc > 0 then GameTooltip:AddLine(table.concat(desc, " "), 1, 1, 1) end
+	local who = Data.LevelClass(f)
+	if who then GameTooltip:AddLine(who, 1, 1, 1) end
 	if online then
-		GameTooltip:AddLine("Online", 0.1, 1, 0.1)
+		GameTooltip:AddLine(L["Online"], 0.1, 1, 0.1)
 		if f.lastZone then GameTooltip:AddLine(f.lastZone, 1, 1, 1) end
 	else
-		GameTooltip:AddLine(Data.status[key] == nil and "Checking..." or "Offline", 0.6, 0.6, 0.6)
-		GameTooltip:AddLine("Last seen " .. Data.Ago(f.lastSeen), 0.6, 0.6, 0.6)
-		if f.lastZone then GameTooltip:AddLine("Last zone: " .. f.lastZone, 0.6, 0.6, 0.6) end
+		GameTooltip:AddLine(Data.status[key] == nil and L["Checking..."] or L["Offline"], 0.6, 0.6, 0.6)
+		local ago = Data.Ago(f.lastSeen)
+		if ago then GameTooltip:AddLine(L["Last seen %s"]:format(ago), 0.6, 0.6, 0.6) end
+		if f.lastZone then GameTooltip:AddLine(L["Last zone: %s"]:format(f.lastZone), 0.6, 0.6, 0.6) end
 	end
 	if f.note then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(f.note, 1, 0.82, 0, true)
 	end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine("Double-click to whisper, right-click for options.", 0.5, 0.5, 0.5, true)
+	GameTooltip:AddLine(L["Double-click to whisper, right-click for options."], 0.5, 0.5, 0.5, true)
 	GameTooltip:Show()
 end
 
@@ -182,12 +183,12 @@ local function OpenRowMenu(row)
 	if not (key and MenuUtil and MenuUtil.CreateContextMenu) then return end
 	MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(Data.Display(key))
-		root:CreateButton("Whisper", function() Actions.Whisper(key) end)
-		root:CreateButton("Invite", function() Actions.Invite(key) end)
-		root:CreateButton("Who", function() Actions.Who(key) end)
-		root:CreateButton("Set Note", function() Actions.SetNote(key) end)
+		root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(key) end)
+		root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(key) end)
+		root:CreateButton(G("WHO", "Who"), function() Actions.Who(key) end)
+		root:CreateButton(G("SET_NOTE", "Set Note"), function() Actions.SetNote(key) end)
 		root:CreateDivider()
-		root:CreateButton("Remove Friend", function() Actions.Remove(key) end)
+		root:CreateButton(G("REMOVE_FRIEND", "Remove Friend"), function() Actions.Remove(key) end)
 	end)
 end
 
@@ -235,7 +236,9 @@ local function InitRow(row, elementData)
 	else
 		row.Name:SetText(GREY .. name .. "|r")
 	end
-	row.Info:SetText(InfoLine(key, f))
+	local details = ns.db.settings.showDetails
+	row.Info:SetShown(details)
+	if details then row.Info:SetText(InfoLine(key, f)) end
 	row.NoteIcon:SetShown(f.note ~= nil)
 	row.Selected:SetShown(key == selectedKey)
 end
@@ -248,14 +251,15 @@ function UI.Refresh()
 	if not (frame and frame:IsShown()) then return end
 	local items = {}
 	for _, key in ipairs(Data.Sorted()) do items[#items + 1] = { key = key } end
+	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
 	dataProvider = CreateDataProvider(items)
 	scrollBox:SetDataProvider(dataProvider, ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
 	if selectedKey and not Data.Has(selectedKey) then selectedKey = nil end
 
 	local online, total = Data.CountOnline()
-	local text = ("Online: |cffffffff%d|r / %d"):format(online, total)
+	local text = L["Online: |cffffffff%d|r / %d"]:format(online, total)
 	local paused = Presence.PausedReason()
-	if paused then text = text .. GREY .. "  (checks paused: " .. paused .. ")|r" end
+	if paused then text = text .. GREY .. "  (" .. L["checks paused: %s"]:format(L[paused]) .. ")|r" end
 	onlineText:SetText(text)
 	emptyText:SetShown(total == 0)
 	UpdateButtons()
@@ -305,9 +309,38 @@ local function Build()
 	elseif frame.TitleText then frame.TitleText:SetText(ns.NAME) end
 	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, ICON) end
 
+	-- a small, quiet gear: opens Options > AddOns > Old Friends List
+	local gear = CreateFrame("Button", nil, frame)
+	gear:SetSize(16, 16)
+	gear:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -35)
+	local gearIcon = gear:CreateTexture(nil, "ARTWORK")
+	gearIcon:SetAllPoints()
+	if not (gearIcon.SetAtlas and pcall(gearIcon.SetAtlas, gearIcon, "QuestLog-icon-setting")) then
+		gearIcon:SetTexture("Interface\\Buttons\\UI-OptionsButton")
+	end
+	gearIcon:SetDesaturated(true)
+	gear:SetAlpha(0.45)
+	gear:SetScript("OnEnter", function(self)
+		self:SetAlpha(1)
+		gearIcon:SetDesaturated(false)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(G("SETTINGS", "Settings"))
+		local key = ns.Options and ns.Options.KeyText()
+		GameTooltip:AddLine(key and L["Notifications, key binding (%s) and more."]:format(key) or L["Notifications, key binding and more."], 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	gear:SetScript("OnLeave", function(self)
+		self:SetAlpha(0.45)
+		gearIcon:SetDesaturated(true)
+		GameTooltip:Hide()
+	end)
+	gear:SetScript("OnClick", function()
+		if not (ns.Options and ns.Options.Open()) then ns.Print(L["The options panel isn't available; type /ofl help."]) end
+	end)
+
 	onlineText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	onlineText:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -36)
-	onlineText:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
+	onlineText:SetPoint("TOPRIGHT", gear, "TOPLEFT", -6, -1)
 	onlineText:SetJustifyH("LEFT")
 
 	local inset = frame.Inset or frame
@@ -318,27 +351,28 @@ local function Build()
 	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, -2)
 	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 6, 2)
 
-	local view = CreateScrollBoxListLinearView()
-	view:SetElementExtent(ROW_HEIGHT)
-	view:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
-	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
+	listView = CreateScrollBoxListLinearView()
+	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
+	listView:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
+	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, listView)
 
 	emptyText = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	emptyText:SetPoint("CENTER", inset, "CENTER", 0, 20)
 	emptyText:SetWidth(260)
-	emptyText:SetText("No friends yet.\n\nClick |cffffd100Add Friend|r, or right-click a player's portrait or name and choose |cffffd100Add to Old Friends|r.")
+	emptyText:SetText(L["No friends yet.\n\nClick |cffffd100%s|r, or right-click a player's portrait or name and choose |cffffd100%s|r."]:format(
+		L["Add Friend"], L["Add to Old Friends"]))
 
-	local add = MakeButton(frame, "Add Friend", 82, Actions.AddPrompt)
+	local add = MakeButton(frame, L["Add Friend"], 82, Actions.AddPrompt)
 	add:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 4)
-	whisperButton = MakeButton(frame, WHISPER or "Whisper", 78, function()
+	whisperButton = MakeButton(frame, G("WHISPER", "Whisper"), 78, function()
 		if selectedKey then Actions.Whisper(selectedKey) end
 	end)
 	whisperButton:SetPoint("LEFT", add, "RIGHT", 2, 0)
-	inviteButton = MakeButton(frame, "Invite", 78, function()
+	inviteButton = MakeButton(frame, G("INVITE", "Invite"), 78, function()
 		if selectedKey then Actions.Invite(selectedKey) end
 	end)
 	inviteButton:SetPoint("LEFT", whisperButton, "RIGHT", 2, 0)
-	removeButton = MakeButton(frame, REMOVE or "Remove", 78, function()
+	removeButton = MakeButton(frame, G("REMOVE", "Remove"), 78, function()
 		if selectedKey then Actions.Remove(selectedKey) end
 	end)
 	removeButton:SetPoint("LEFT", inviteButton, "RIGHT", 2, 0)
@@ -354,6 +388,11 @@ local function Build()
 		if ticker then ticker:Cancel() ticker = nil end
 		if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_CLOSE then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_CLOSE) end
 	end)
+
+	-- The template's close button goes through HideUIPanel, which is protected in combat
+	-- (the window then can't be closed). Hide it directly instead.
+	local close = frame.CloseButton or _G["OldFriendsListFrameCloseButton"]
+	if close then close:SetScript("OnClick", function() frame:Hide() end) end
 
 	tinsert(UISpecialFrames, "OldFriendsListFrame")
 	frame:Hide()
@@ -375,7 +414,7 @@ end
 --------------------------------------------------------------------------------
 
 BINDING_HEADER_OLDFRIENDSLIST = ns.NAME
-BINDING_NAME_OLDFRIENDSLIST_TOGGLE = "Toggle Old Friends List"
+BINDING_NAME_OLDFRIENDSLIST_TOGGLE = L["Toggle Old Friends List"]
 
 function OldFriendsList_Toggle() UI.Toggle() end
 
@@ -385,25 +424,10 @@ function OldFriendsList_OnAddonCompartmentEnter(_, owner)
 	GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
 	GameTooltip:AddLine(ns.NAME)
 	local online, total = Data.CountOnline()
-	GameTooltip:AddLine(("%d of %d online"):format(online, total), 1, 1, 1)
-	GameTooltip:AddLine("Click to open.", 0.5, 0.5, 0.5)
+	GameTooltip:AddLine(L["%d of %d online"]:format(online, total), 1, 1, 1)
+	GameTooltip:AddLine(L["Click to open."], 0.5, 0.5, 0.5)
 	GameTooltip:Show()
 end
 
 function OldFriendsList_OnAddonCompartmentLeave() GameTooltip:Hide() end
 
-ns.Listen("LOGIN", function()
-	if not FriendsFrame then return end
-	local b = CreateFrame("Button", nil, FriendsFrame, "UIPanelButtonTemplate")
-	b:SetSize(104, 22)
-	b:SetText("Old Friends")
-	b:SetPoint("TOPRIGHT", FriendsFrame, "BOTTOMRIGHT", 0, 2)
-	b:SetScript("OnClick", UI.Toggle)
-	b:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine(ns.NAME)
-		GameTooltip:AddLine("Your list of characters, the classic way.", 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-end)

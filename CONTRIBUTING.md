@@ -29,18 +29,26 @@ Open an issue and include:
 | File | Purpose |
 |---|---|
 | `Core.lua` | Namespace, secret-safe helpers, event dispatcher, saved variables |
+| `Locales.lua` | Translations (`ns.L`) and Blizzard's own translated strings (`ns.G`) |
 | `Data.lua` | Name normalization, the friends list, online status |
 | `Notify.lua` | Chat notifications and sound |
 | `Comm.lua` | Addon messages between players (`PING` / `PONG`) |
 | `Presence.lua` | The check scheduler, the hidden "No player named" filter, passive signals, `/who` |
 | `Menus.lua` | Right-click menu entries |
+| `Minimap.lua` | The minimap button |
+| `Settings.lua` | The options panel and the default key binding (Shift-O) |
 | `UI/` | The main window (`MainFrame.lua`) and its row template (`Row.xml`) |
 | `Slash.lua` | `/ofl` commands |
 
 ## Guidelines
 
 - **Indentation:** use tabs in Lua and XML, matching the existing code.
-- **Language:** everything the player sees is in English.
+- **Language:** write player-facing text in English and wrap it in `L["..."]`, then add the
+  translation to each language block in `Locales.lua`. If the game already has the text (check
+  Blizzard's GlobalStrings, e.g. `WHISPER`, `INVITE`), use `ns.G("WHISPER", "Whisper")` instead,
+  so it always matches the client. Debug and `/ofl diag` output stays in English.
+- **Adding a language:** copy the `ptBR` block in `Locales.lua`, change the locale code
+  (`deDE`, `frFR`, `esES`, ...) and translate the right-hand side.
 - **Secret values:** WoW: Forever restricts addons the same way as Midnight. Game values can be
   *secret*, and addon messages are blocked in combat and in instances. Read game values through
   `ns.Safe` (`Safe.Value`, `Safe.Call`), and never assume an addon message went out.

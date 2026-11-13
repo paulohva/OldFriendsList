@@ -214,7 +214,14 @@ end
 
 local function SeenUnit(unit)
 	local key = Data.KeyFromUnit(unit)
-	if not (key and Data.Has(key)) then return end
+	if not (key and Data.Has(key)) then
+		if unit ~= "mouseover" and Safe.Call(UnitIsPlayer, unit) then
+			ns.Debug("%s is %s: not on the list (UnitName %q)", unit, tostring(key), tostring(Safe.Call(UnitName, unit)))
+		end
+		return
+	end
+	ns.Debug("%s is %s: level %s, class %s", unit, key, tostring(Safe.Call(UnitLevel, unit)),
+		tostring(select(2, Safe.CallAll(UnitClass, unit))))
 	if Safe.Call(UnitIsConnected, unit) == false then return end
 	local info = Data.InfoFromUnit(unit)
 	if info then Data.UpdateInfo(key, info.class, info.level, nil) end
@@ -223,6 +230,12 @@ local function SeenUnit(unit)
 end
 
 ns.On("PLAYER_TARGET_CHANGED", function() SeenUnit("target") end)
+ns.On("UNIT_LEVEL", function(unit)
+	unit = Safe.Value(unit)
+	if type(unit) == "string" and (unit == "target" or unit == "focus" or unit:find("^party%d") or unit:find("^raid%d")) then
+		SeenUnit(unit)
+	end
+end)
 ns.On("UPDATE_MOUSEOVER_UNIT", function() SeenUnit("mouseover") end)
 ns.On("GROUP_ROSTER_UPDATE", function()
 	if Safe.Call(IsInRaid) then
@@ -240,7 +253,7 @@ local whoKey, whoAt
 
 function Presence.Who(key)
 	if not (C_FriendList and C_FriendList.SendWho) then
-		ns.Print("/who isn't available.")
+		ns.Print(ns.L["/who isn't available."])
 		return
 	end
 	whoKey, whoAt = key, GetTime()
@@ -249,25 +262,113 @@ function Presence.Who(key)
 	local ok, err = pcall(C_FriendList.SendWho, filter, origin)
 	if not ok then
 		whoKey = nil
-		ns.Print("Couldn't send /who: %s", tostring(err))
+		ns.Print(ns.L["Couldn't send /who: %s"], tostring(err))
 	end
 end
+
+-- A few /who results come back as chat lines instead of WHO_LIST_UPDATE:
+-- "[Valkur Maul]: Level 29 Tauren Warrior <Guild> - Zone", in the client's language.
+-- The pattern is built from the game's own format (WHO_LIST_FORMAT / WHO_LIST_GUILD_FORMAT).
+
+-- "|Hplayer:%s|h[%s]|h: Level %d %s %s - %s" -> Lua pattern + which argument each capture is
+local function FormatToPattern(fmt)
+	if type(fmt) ~= "string" or fmt == "" then return nil end
+	local out, order, i, n = { "^" }, {}, 1, 0
+	while i <= #fmt do
+		local spec = fmt:match("^%%%d*%$?[sd]", i)
+		if spec then
+			n = n + 1
+			local position = spec:match("^%%(%d+)%$")
+			order[#order + 1] = position and tonumber(position) or n
+			out[#out + 1] = spec:sub(-1) == "d" and "(%d+)" or "(.-)"
+			i = i + #spec
+		elseif fmt:sub(i, i + 1) == "%%" then
+			out[#out + 1] = "%%"
+			i = i + 2
+		else
+			local c = fmt:sub(i, i)
+			out[#out + 1] = c:find("[%(%)%.%+%-%*%?%[%]%^%$%%]") and ("%" .. c) or c
+			i = i + 1
+		end
+	end
+	out[#out + 1] = "$"
+	return table.concat(out), order
+end
+
+local whoPatterns
+local function WhoPatterns()
+	if whoPatterns then return whoPatterns end
+	whoPatterns = {}
+	for _, name in ipairs({ "WHO_LIST_GUILD_FORMAT", "WHO_LIST_FORMAT" }) do
+		local pattern, order = FormatToPattern(_G[name])
+		if pattern then
+			whoPatterns[#whoPatterns + 1] = { pattern = pattern, order = order, guild = name == "WHO_LIST_GUILD_FORMAT" }
+		end
+	end
+	return whoPatterns
+end
+
+-- "Tauren Guerreiro" -> "WARRIOR" (the longest localized class name at the end of the text)
+local function ClassFromText(text)
+	local best, bestLen
+	for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
+		for token, name in pairs(names) do
+			if #name > 0 and (text == name or text:sub(-(#name + 1)) == " " .. name) and (not bestLen or #name > bestLen) then
+				best, bestLen = token, #name
+			end
+		end
+	end
+	return best
+end
+
+-- name, level, class token, zone from a /who chat line, or nil
+function Presence.ParseWhoLine(msg)
+	for _, p in ipairs(WhoPatterns()) do
+		local caps = { msg:match(p.pattern) }
+		if #caps > 0 then
+			local args = {}
+			for j, index in ipairs(p.order) do args[index] = caps[j] end
+			local raceClass = ((args[4] or "") .. " " .. (args[5] or "")):gsub("^%s+", "")
+			return args[1] or args[2], tonumber(args[3]), ClassFromText(raceClass), p.guild and args[7] or args[6]
+		end
+	end
+end
+
+ns.On("CHAT_MSG_SYSTEM", function(msg)
+	if not whoKey or GetTime() - whoAt > 15 then return end
+	msg = Safe.Value(msg)
+	if type(msg) ~= "string" then return end
+	local name, level, class, zone = Presence.ParseWhoLine(msg)
+	if not name or Data.Normalize(name) ~= whoKey then return end
+	local key = whoKey
+	whoKey = nil
+	ns.Debug("who (chat): %s level %s class %s zone %s", key, tostring(level), tostring(class), tostring(zone))
+	Data.UpdateInfo(key, class, level, zone)
+	pending[key] = nil
+	Data.SetStatus(key, "online")
+end)
 
 ns.On("WHO_LIST_UPDATE", function()
 	if not whoKey or GetTime() - whoAt > 15 then whoKey = nil return end
 	local key = whoKey
-	whoKey = nil
 	local n = Safe.Call(C_FriendList.GetNumWhoResults) or 0
+	ns.Debug("who (list): %d results for %s", n, key)
 	for i = 1, n do
 		local info = Safe.Call(C_FriendList.GetWhoInfo, i)
 		if type(info) == "table" and Data.Normalize(Safe.Value(info.fullName)) == key then
+			whoKey = nil
 			Data.UpdateInfo(key, Safe.Value(info.filename), Safe.Value(info.level), Safe.Value(info.area))
 			pending[key] = nil
 			Data.SetStatus(key, "online")
 			return
 		end
 	end
-	Data.SetStatus(key, "offline")
+	-- not in the list: either nobody was found (offline), or the answer went to chat instead
+	-- (handled above), so only conclude "offline" when the search found nobody at all
+	if n == 0 then
+		whoKey = nil
+		Data.SetStatus(key, "offline")
+	end
 end)
 
 --------------------------------------------------------------------------------

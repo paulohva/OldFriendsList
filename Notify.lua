@@ -38,15 +38,37 @@ local function PlayOnlineSound()
 	if id then pcall(PlaySound, id, "Master") end
 end
 
+-- Blizzard's own string when it exists and takes exactly `count` %s, else nil
+local function Blizzard(name, count)
+	local s = _G[name]
+	if type(s) ~= "string" then return nil end
+	local _, n = s:gsub("%%s", "")
+	local _, other = s:gsub("%%[^s%%]", "")
+	if n == count and other == 0 then return s end
+	return nil
+end
+
+-- the game's own "|Hplayer:%s|h[%s]|h has come online." (already in the client's language)
 function Notify.Online(key)
 	if not ns.db.settings.notifyOnline then return end
-	SystemLine(("%s has come online."):format(PlayerLink(key)))
+	local blizzard = Blizzard("ERR_FRIEND_ONLINE_SS", 2)
+	if blizzard then
+		local f = Data.Get(key)
+		local c = f and Data.ClassColor(f.class)
+		local display = Data.Display(key)
+		if c and c.WrapTextInColorCode then display = c:WrapTextInColorCode(display) end
+		SystemLine(blizzard:format(key, display))
+	else
+		SystemLine(ns.L["%s has come online."]:format(PlayerLink(key)))
+	end
 	PlayOnlineSound()
 end
 
+-- the game's own "%s has gone offline."
 function Notify.Offline(key)
 	if not ns.db.settings.notifyOffline then return end
-	SystemLine(("%s has gone offline."):format(PlayerLink(key)))
+	local blizzard = Blizzard("ERR_FRIEND_OFFLINE_S", 1)
+	SystemLine((blizzard or ns.L["%s has gone offline."]):format(PlayerLink(key)))
 end
 
 -- after the first full sweep: one line with everyone already online
@@ -57,7 +79,7 @@ function Notify.Summary()
 		if Data.status[key] == "online" then names[#names + 1] = PlayerLink(key) end
 	end
 	if #names > 0 and ns.db.settings.notifyOnline then
-		SystemLine(("Old Friends online: %s"):format(table.concat(names, ", ")))
+		ns.Print(#names == 1 and ns.L["%d friend online: %s"] or ns.L["%d friends online: %s"], #names, table.concat(names, ", "))
 	end
 end
 
