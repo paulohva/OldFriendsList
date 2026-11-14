@@ -19,6 +19,8 @@ Presence.probe = {}         -- keys pinged by hand (/ofl ping): report the outco
 local TICK = 1.5            -- seconds between pings (keeps well under the addon message throttle)
 local TIMEOUT = 4           -- no "No player named" by then -> online
 local SUMMARY_MAX_WAIT = 90 -- print the login summary by then even if some checks are still pending
+local GROUP_SCAN = 15       -- seconds between re-reads of the group (members' zones)
+local lastGroupScan = 0
 
 local pending = {}          -- key -> GetTime() of a ping awaiting an answer
 local lastCheck = {}        -- key -> GetTime() of the last ping
@@ -158,6 +160,12 @@ local function Tick()
 
 	MaybeSummary(now)
 
+	-- group members' zones (they move around); cheap, and fine in combat or instances
+	if now - lastGroupScan >= GROUP_SCAN and Presence.ScanGroup then
+		lastGroupScan = now
+		Presence.ScanGroup()
+	end
+
 	if not readyAt or now < readyAt then return end
 	local can, why = Comm.CanSend()
 	if not can then Pause(why) return end
@@ -212,6 +220,41 @@ for _, event in ipairs({
 	ns.On(event, function(_, sender) SeenName(sender) end)
 end
 
+-- zone of a group member from the group roster (GetRaidRosterInfo works for parties too)
+local function RosterZone(key)
+	local n = Safe.Call(GetNumGroupMembers) or 0
+	for i = 1, n do
+		local name, _, _, _, _, _, zone, online = Safe.CallAll(GetRaidRosterInfo, i)
+		if name and Data.Normalize(name) == key then
+			if online == false then return nil end
+			return zone
+		end
+	end
+end
+
+-- zone of a unit from the map it's on
+local function MapZone(unit)
+	if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then return nil end
+	local mapID = Safe.Call(C_Map.GetBestMapForUnit, unit)
+	if type(mapID) ~= "number" then return nil end
+	local info = Safe.Call(C_Map.GetMapInfo, mapID)
+	return type(info) == "table" and Safe.Value(info.name) or nil
+end
+
+-- where a unit is: someone you target or mouse over is near you, so in your zone;
+-- a group member can be anywhere: ask the group roster, then the map
+local function ZoneOfUnit(unit, key)
+	local zone
+	if unit == "target" or unit == "mouseover" then
+		zone = Safe.Call(GetRealZoneText) or Safe.Call(GetZoneText)
+	elseif unit:find("^party%d") or unit:find("^raid%d") then
+		zone = RosterZone(key) or MapZone(unit)
+	end
+	if type(zone) == "string" and zone ~= "" then return zone end
+	return nil
+end
+Presence.ZoneOfUnit, Presence.RosterZone, Presence.MapZone = ZoneOfUnit, RosterZone, MapZone
+
 local function SeenUnit(unit)
 	local key = Data.KeyFromUnit(unit)
 	if not (key and Data.Has(key)) then
@@ -220,14 +263,25 @@ local function SeenUnit(unit)
 		end
 		return
 	end
-	ns.Debug("%s is %s: level %s, class %s", unit, key, tostring(Safe.Call(UnitLevel, unit)),
-		tostring(select(2, Safe.CallAll(UnitClass, unit))))
 	if Safe.Call(UnitIsConnected, unit) == false then return end
 	local info = Data.InfoFromUnit(unit)
-	if info then Data.UpdateInfo(key, info.class, info.level, nil) end
+	local zone = ZoneOfUnit(unit, key)
+	ns.Debug("%s is %s: level %s, class %s, zone %s", unit, key, tostring(info and info.level),
+		tostring(info and info.class), tostring(zone))
+	Data.UpdateInfo(key, info and info.class, info and info.level, zone)
 	pending[key] = nil
 	Data.Seen(key)
 end
+
+-- everyone in your group (on join/leave, and every few seconds: people change zones)
+local function ScanGroup()
+	if Safe.Call(IsInRaid) then
+		for i = 1, 40 do SeenUnit("raid" .. i) end
+	elseif Safe.Call(IsInGroup) then
+		for i = 1, 4 do SeenUnit("party" .. i) end
+	end
+end
+Presence.ScanGroup = ScanGroup
 
 ns.On("PLAYER_TARGET_CHANGED", function() SeenUnit("target") end)
 ns.On("UNIT_LEVEL", function(unit)
@@ -237,13 +291,7 @@ ns.On("UNIT_LEVEL", function(unit)
 	end
 end)
 ns.On("UPDATE_MOUSEOVER_UNIT", function() SeenUnit("mouseover") end)
-ns.On("GROUP_ROSTER_UPDATE", function()
-	if Safe.Call(IsInRaid) then
-		for i = 1, 40 do SeenUnit("raid" .. i) end
-	else
-		for i = 1, 4 do SeenUnit("party" .. i) end
-	end
-end)
+ns.On("GROUP_ROSTER_UPDATE", ScanGroup)
 
 --------------------------------------------------------------------------------
 -- Who (only from a click: the game requires a hardware event)

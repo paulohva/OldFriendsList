@@ -108,6 +108,12 @@ local function Diag()
 				tostring(Data.KeyFromUnit(unit))))
 		end
 	end
+	-- where a group member is, by each source
+	if UnitExists("party1") then
+		local key = Data.KeyFromUnit("party1")
+		print(("  party1 %s: roster zone %q, map zone %q"):format(tostring(key),
+			tostring(key and Presence.RosterZone(key)), tostring(Presence.MapZone("party1"))))
+	end
 	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
 	local can, why = ns.Comm.CanSend()
 	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))

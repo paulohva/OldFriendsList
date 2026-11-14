@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.2.1
+
+- Friends in your group now show their **zone** without a **Who**, and it follows them as they
+  move. Friends you target or mouse over show your current zone (they're right next to you).
+
 ## 0.2.0
 
 - **Keyboard shortcut**: press **Shift-O** to open the list. It's set for you on first login,
