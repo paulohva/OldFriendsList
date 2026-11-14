@@ -1,0 +1,43 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<!-- One Old Friend in our section of the game's Social window (O), drawn like Blizzard's
+	     friend cards (same background, highlight and status atlases). -->
+	<Button name="OldFriendsListSocialRowTemplate" virtual="true">
+		<Size x="300" y="58"/>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<Texture parentKey="Background" atlas="friends-card-default" setAllPoints="true"/>
+			</Layer>
+			<Layer level="ARTWORK">
+				<!-- text starts where Blizzard's does: ~10 from the card's left edge, both lines aligned -->
+				<FontString parentKey="FriendName" inherits="GameFontNormalLarge" justifyH="LEFT" wordwrap="false">
+					<Anchors>
+						<Anchor point="TOPLEFT" x="10" y="-10"/>
+						<Anchor point="TOPRIGHT" x="-32" y="-10"/>
+					</Anchors>
+				</FontString>
+				<FontString parentKey="Info" inherits="GameFontHighlight" justifyH="LEFT" wordwrap="false">
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeKey="$parent.FriendName" relativePoint="BOTTOMLEFT" x="0" y="-6"/>
+						<Anchor point="TOPRIGHT" relativeKey="$parent.FriendName" relativePoint="BOTTOMRIGHT" y="-6"/>
+					</Anchors>
+				</FontString>
+				<Texture parentKey="NoteIcon" hidden="true" file="Interface\Buttons\UI-GuildButton-PublicNote-Up">
+					<Size x="14" y="14"/>
+					<Anchors>
+						<Anchor point="RIGHT" x="-12" y="0"/>
+					</Anchors>
+				</Texture>
+			</Layer>
+			<Layer level="OVERLAY">
+				<!-- like Blizzard's presence holder: centred on the card's top-left corner, offset (3, -4) -->
+				<Texture parentKey="Presence" atlas="friends-status-online">
+					<Size x="16" y="16"/>
+					<Anchors>
+						<Anchor point="CENTER" relativePoint="TOPLEFT" x="3" y="-4"/>
+					</Anchors>
+				</Texture>
+			</Layer>
+		</Layers>
+		<HighlightTexture atlas="friends-card-selected" alphaMode="ADD"/>
+	</Button>
+</Ui>

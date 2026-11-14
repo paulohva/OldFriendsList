@@ -19,8 +19,10 @@ local kinds = {}     -- [window] = "tab" | "icon"
 
 local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 
+-- the tab is opt-in, and not needed when the friends are already in the window (integrated mode)
 local function Enabled()
-	return ns.db and ns.db.settings.socialIcon and true or false
+	local s = ns.db and ns.db.settings
+	return s and s.socialIcon and s.socialMode ~= "integrated" and true or false
 end
 
 local function SetupButton(b)

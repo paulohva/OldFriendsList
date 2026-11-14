@@ -39,6 +39,9 @@ Open an issue and include:
 | `Settings.lua` | The options panel and the default key binding (Shift-O) |
 | `UI/` | The main window (`MainFrame.lua`) and its row template (`Row.xml`) |
 | `Slash.lua` | `/ofl` commands |
+| `UI/SocialList.lua`, `UI/SocialRow.xml` | The Old Friends group inside the game's Social window (O) |
+| `UI/SocialTab.lua` | The optional tab in the Social window |
+| `UI/Setup.lua` | The first-time setup (Social window or separate window) |
 
 ## Guidelines
 

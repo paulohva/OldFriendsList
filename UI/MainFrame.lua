@@ -192,6 +192,19 @@ local function OpenRowMenu(row)
 	end)
 end
 
+-- the name as shown in a list: class color (option) when online, grey when offline
+local function NameText(key, f)
+	local name = Data.Display(key)
+	local online = Data.status[key] == "online"
+	local c = online and Data.ClassColor(f.class)
+	if c and c.WrapTextInColorCode then return c:WrapTextInColorCode(name) end
+	if online then return name end
+	return GREY .. name .. "|r"
+end
+
+-- shared with the group in the game's Social window (UI/SocialList.lua): any frame with a .key
+UI.InfoLine, UI.NameText, UI.ShowFriendTooltip, UI.OpenFriendMenu = InfoLine, NameText, ShowTooltip, OpenRowMenu
+
 local function UpdateButtons()
 	if not frame then return end
 	local has = selectedKey and Data.Has(selectedKey)
@@ -227,15 +240,7 @@ local function InitRow(row, elementData)
 	end
 	local online = Data.status[key] == "online"
 	row.Status:SetTexture(online and ONLINE_ICON or OFFLINE_ICON)
-	local name = Data.Display(key)
-	local c = online and Data.ClassColor(f.class)
-	if c and c.WrapTextInColorCode then
-		row.Name:SetText(c:WrapTextInColorCode(name))
-	elseif online then
-		row.Name:SetText(name)
-	else
-		row.Name:SetText(GREY .. name .. "|r")
-	end
+	row.Name:SetText(NameText(key, f))
 	local details = ns.db.settings.showDetails
 	row.Info:SetShown(details)
 	if details then row.Info:SetText(InfoLine(key, f)) end
