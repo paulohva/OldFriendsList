@@ -8,6 +8,8 @@ All notable changes to Old Friends List are listed here.
 
 - Friends in your group now show their **zone** without a **Who**, and it follows them as they
   move. Friends you target or mouse over show your current zone (they're right next to you).
+- **Faster "has gone offline"** with long lists: friends who are online are checked first, so a
+  logout is noticed within the check interval; offline friends use the time that's left.
 
 ## 0.2.0
 

@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Old Friends List
 ## Notes: A classic, character-based friends list: add characters, see who's online, whisper and invite.
-## Author: paulohva
+## Author: zul_moletom
 ## Version: @project-version@
 ## X-License: MIT
 ## X-Website: https://github.com/paulohva/OldFriendsList

@@ -117,18 +117,32 @@ local function Pause(reason)
 	wipe(pending)
 end
 
+-- Who to check next (one ping every TICK seconds):
+--  1. friends never checked yet (just added, or right after login);
+--  2. online friends whose check is due: they're the ones who can log out, so the
+--     "has gone offline" message stays prompt even with a long list;
+--  3. offline friends whose check is due, with the time that's left.
+-- Within each group, the one checked longest ago goes first.
 local function NextFriend(now)
 	local interval = ns.db.settings.pingInterval
-	local best, bestAt
+	local online, onlineAt, offline, offlineAt
 	for _, key in ipairs(Data.Visible()) do
 		if not pending[key] then
 			local at = lastCheck[key]
 			if not at then return key end
-			if now - at >= interval and (not bestAt or at < bestAt) then best, bestAt = key, at end
+			if now - at >= interval then
+				if Data.status[key] == "online" then
+					if not onlineAt or at < onlineAt then online, onlineAt = key, at end
+				elseif not offlineAt or at < offlineAt then
+					offline, offlineAt = key, at
+				end
+			end
 		end
 	end
-	return best
+	return online or offline
 end
+Presence.NextFriend = NextFriend   -- (for tests)
+Presence.lastCheck = lastCheck
 
 local function MaybeSummary(now)
 	if Notify.ready or not loginAt then return end
