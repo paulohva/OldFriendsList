@@ -4,6 +4,16 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.1
+
+- First-time setup, clearer:
+  - the question is now "How would you like to see your friends?";
+  - "Closing keeps everything as it is" only shows when there's something to keep (players
+    updating from an older version, or running the setup again), not on a new install;
+  - the Social window option no longer says the Old Friends are shown first;
+  - the separate window's checkbox now says it's O that opens this window, and the game's
+    friends window moves to Shift-O.
+
 ## 0.3.0
 
 - **Old Friends in the Social window (O):** optionally, your Old Friends appear as a group

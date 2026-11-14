@@ -109,7 +109,7 @@ local function Build()
 
 	local question = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightLarge")
 	question:SetPoint("TOP", frame, "TOP", 0, -60)
-	question:SetText(L["How would you like to see your Old Friends?"])
+	question:SetText(L["How would you like to see your friends?"])
 
 	-- for players updating: nothing changes unless they pick the new way
 	local intro = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -119,7 +119,7 @@ local function Build()
 	frame.Intro = intro
 
 	local integrated = MakeCard(frame, IMAGE_INTEGRATED, L["In the Social window (O)"],
-		L["Your Old Friends appear together with the game's friends list, shown first. Shift-O still opens the separate window."],
+		L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."],
 		"integrated")
 	integrated:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -110)
 
@@ -137,7 +137,7 @@ local function Build()
 	end
 	label:SetWidth(CARD_WIDTH - 60)
 	label:SetJustifyH("LEFT")
-	label:SetText(L["Use O instead (the Social window moves to Shift-O)"])
+	label:SetText(L["Use O to open this window (the game's friends window moves to Shift-O)"])
 
 	cards = { integrated, separate }
 
@@ -146,7 +146,7 @@ local function Build()
 	footer:SetWidth(CARD_WIDTH * 2 - 40)
 	footer:SetJustifyH("CENTER")
 	footer:SetSpacing(2)
-	footer:SetText(L["Closing keeps everything as it is."] .. "\n" .. L["Change it anytime in Options > AddOns > Old Friends List."])
+	frame.Footer = footer   -- its text depends on whether there's something to keep (Setup.Show)
 
 	tinsert(UISpecialFrames, "OldFriendsListSetupFrame")
 	frame:Hide()
@@ -167,6 +167,14 @@ function Setup.Show()
 		card.Choose:SetText(isCurrent and L["Keep as it is"] or L["Choose"])
 	end
 	swapCheck:SetChecked(ns.Options.IsSwapped())
+	-- "closing keeps everything" only makes sense when there's something to keep:
+	-- players updating from an older version, or running the setup again; not a new install
+	local change = L["Change it anytime in Options > AddOns > Old Friends List."]
+	if updating or s.setupDone then
+		frame.Footer:SetText(L["Closing keeps everything as it is."] .. "\n" .. change)
+	else
+		frame.Footer:SetText(change)
+	end
 	frame:Show()
 end
 
