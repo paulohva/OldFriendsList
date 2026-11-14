@@ -190,7 +190,7 @@ end
 local function AddSocialSection(layout)
 	AddHeader(layout, L["Social window"])
 	AddProxyCheckbox("integrated", L["Show Old Friends in the Social window (O)"],
-		L["Your Old Friends appear together with the game's friends list, shown first. Shift-O still opens the separate window."],
+		L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."],
 		false,
 		function() return ns.db.settings.socialMode == "integrated" end,
 		function(value) Options.SetMode(value and "integrated" or "separate") end)

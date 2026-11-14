@@ -126,8 +126,8 @@ if locale == "ptBR" then
 	L["O opens the Social window again, and Shift-O Old Friends List."] =
 		"O O voltou a abrir a janela de amigos, e o Shift-O a Old Friends List."
 	L["Show Old Friends in the Social window (O)"] = "Mostrar os Old Friends na janela de amigos (O)"
-	L["Your Old Friends appear together with the game's friends list, shown first. Shift-O still opens the separate window."] =
-		"Seus Old Friends aparecem junto com a lista de amigos do jogo, em primeiro lugar. O Shift-O continua abrindo a janela separada."
+	L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."] =
+		"Seus Old Friends aparecem junto com a lista de amigos do jogo. O Shift-O continua abrindo a janela separada."
 	L["Advanced"] = "Avançado"
 	L["First-time setup"] = "Configuração inicial"
 	L["Run the setup again"] = "Refazer a configuração"
@@ -138,11 +138,12 @@ if locale == "ptBR" then
 	L["Old Friends List opens in its own window (%s)."] = "A Old Friends List abre na sua própria janela (%s)."
 	L["(your current choice)"] = "(sua escolha atual)"
 	L["Choose"] = "Escolher"
-	L["How would you like to see your Old Friends?"] = "Como você quer ver seus Old Friends?"
+	L["How would you like to see your friends?"] = "Como você quer ver seus amigos?"
 	L["In the Social window (O)"] = "Na janela de amigos (O)"
 	L["Separate window"] = "Janela separada"
 	L["A classic friends window of its own, opened with Shift-O."] = "Uma janela de amigos clássica, só dela, aberta com Shift-O."
-	L["Use O instead (the Social window moves to Shift-O)"] = "Usar o O (a janela de amigos passa para o Shift-O)"
+	L["Use O to open this window (the game's friends window moves to Shift-O)"] =
+		"Usar o O para abrir esta janela (a janela de amigos do jogo passa para o Shift-O)"
 	L["Closing keeps everything as it is."] = "Fechar mantém tudo como está."
 	L["Change it anytime in Options > AddOns > Old Friends List."] = "Mude quando quiser em Opções > AddOns > Old Friends List."
 	L["New: your Old Friends can also appear in the game's Social window. Nothing changes unless you pick it."] =
