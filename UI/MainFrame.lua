@@ -8,7 +8,7 @@ local Safe, Data, Presence, L, G = ns.Safe, ns.Data, ns.Presence, ns.L, ns.G
 local UI = {}
 ns.UI = UI
 
-local ICON = ns.ICON
+local PORTRAIT = ns.PORTRAIT
 local ONLINE_ICON = "Interface\\FriendsFrame\\StatusIcon-Online"
 local OFFLINE_ICON = "Interface\\FriendsFrame\\StatusIcon-Offline"
 local ROW_HEIGHT = 34          -- name + level/zone line
@@ -312,7 +312,7 @@ local function Build()
 
 	if frame.SetTitle then frame:SetTitle(ns.NAME)
 	elseif frame.TitleText then frame.TitleText:SetText(ns.NAME) end
-	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, ICON) end
+	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, PORTRAIT) end
 
 	-- a small, quiet gear: opens Options > AddOns > Old Friends List
 	local gear = CreateFrame("Button", nil, frame)
