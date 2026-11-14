@@ -140,11 +140,13 @@ end
 function Data.UpdateInfo(key, class, level, zone)
 	local f = Data.Get(key)
 	if not f then return end
-	if type(class) == "string" and class ~= "" then f.class = class end
+	local changed = false
+	if type(class) == "string" and class ~= "" and f.class ~= class then f.class, changed = class, true end
 	level = tonumber(level)
-	if level and level > 0 then f.level = level end
-	if type(zone) == "string" and zone ~= "" then f.lastZone = zone end
-	ns.Fire("FRIENDS_CHANGED", key, "info")
+	if level and level > 0 and f.level ~= level then f.level, changed = level, true end
+	if type(zone) == "string" and zone ~= "" and f.lastZone ~= zone then f.lastZone, changed = zone, true end
+	-- (the group is re-read every few seconds: only redraw when something actually changed)
+	if changed then ns.Fire("FRIENDS_CHANGED", key, "info") end
 end
 
 -- friends that belong to this character's realm group and faction
