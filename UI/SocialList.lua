@@ -21,8 +21,15 @@ local ROW_TEMPLATE = "OldFriendsListSocialRowTemplate"
 local ROW_HEIGHT, ROW_SPACING = 58, 3
 local HEADER_HEIGHT = 24
 local MAX_ROWS = 4                 -- more friends than this: the section scrolls
-local PAD_LEFT, PAD_RIGHT, PAD_TOP, GAP = 10, 7, 10, 6
+local PAD_LEFT, PAD_RIGHT, PAD_TOP = 10, 7, 10
+-- below our last card: nothing more. Blizzard's list starts with its own padding, which already
+-- makes about the same gap Blizzard leaves between a group's last card and the next header
+-- (measured in game: ~12)
+local END_GAP = 0
+-- collapsed: header to header, like Blizzard's collapsed groups (measured in game: 2 less)
+local COLLAPSED_END_GAP = -2
 local DOT_MARGIN = 6               -- room for the status dots, centred on the cards' top-left corner
+local HEADER_GAP = 8               -- header to first card, same as Blizzard's Favorites
 
 local list            -- SocialUIFrame.FriendsList
 local section, header, scrollBox, scrollBar, view
@@ -119,8 +126,9 @@ end
 function SocialList.SectionHeight(n, collapsed)
 	if n == 0 then return 0 end
 	local rows = collapsed and 0 or math.min(n, MAX_ROWS)
-	local body = rows > 0 and (rows * (ROW_HEIGHT + ROW_SPACING) + 2) or 0
-	return PAD_TOP + HEADER_HEIGHT + body + GAP
+	-- header gap + the cards with the spacing between them (none after the last one)
+	local body = rows > 0 and (HEADER_GAP + rows * (ROW_HEIGHT + ROW_SPACING) - ROW_SPACING) or 0
+	return PAD_TOP + HEADER_HEIGHT + body + (rows > 0 and END_GAP or COLLAPSED_END_GAP)
 end
 
 local function SetCollapseIcon(collapsed)
@@ -161,8 +169,8 @@ function SocialList.Layout()
 	-- full width like Blizzard's cards, unless our own scroll bar needs the room
 	scrollBox:ClearAllPoints()
 	-- (the list has an inner margin so the status dots, which sit on the cards' corner, aren't clipped)
-	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", -2 - DOT_MARGIN, DOT_MARGIN - 2)
-	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", scrolls and -12 or 0, DOT_MARGIN - 2)
+	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", -DOT_MARGIN, DOT_MARGIN - HEADER_GAP)
+	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", scrolls and -12 or 0, DOT_MARGIN - HEADER_GAP)
 	if rows > 0 then
 		scrollBox:SetHeight(DOT_MARGIN + rows * (ROW_HEIGHT + ROW_SPACING))
 		local items = {}

@@ -4,6 +4,13 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.2
+
+- No more summary line on every login ("Old Friends List: 1 friend online: ..."). Friends who
+  log in or out after you still get their "has come online" / "has gone offline" line.
+- Social window: the space between the "Old Friends List" header and its first friend now
+  matches Blizzard's Favorites, and the cards line up with Blizzard's.
+
 ## 0.3.1
 
 - First-time setup, clearer:

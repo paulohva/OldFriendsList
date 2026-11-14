@@ -71,7 +71,13 @@ function Notify.Offline(key)
 	SystemLine((blizzard or ns.L["%s has gone offline."]):format(PlayerLink(key)))
 end
 
--- after the first full sweep: one line with everyone already online
+-- after the first full check: from now on, logins and logouts are announced one by one.
+-- (Who was already online when you logged in isn't announced: no summary line since 0.3.2.)
+function Notify.FirstCheckDone()
+	Notify.ready = true
+end
+
+-- one line with everyone online (not shown on login anymore; kept for the demo screenshots)
 function Notify.Summary()
 	Notify.ready = true
 	local names = {}

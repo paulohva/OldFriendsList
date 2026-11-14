@@ -18,7 +18,7 @@ Presence.probe = {}         -- keys pinged by hand (/ofl ping): report the outco
 
 local TICK = 1.5            -- seconds between pings (keeps well under the addon message throttle)
 local TIMEOUT = 4           -- no "No player named" by then -> online
-local SUMMARY_MAX_WAIT = 90 -- print the login summary by then even if some checks are still pending
+local SUMMARY_MAX_WAIT = 90 -- the first check counts as done by then, even if some friends are still pending
 local GROUP_SCAN = 15       -- seconds between re-reads of the group (members' zones)
 local lastGroupScan = 0
 
@@ -144,13 +144,15 @@ end
 Presence.NextFriend = NextFriend   -- (for tests)
 Presence.lastCheck = lastCheck
 
-local function MaybeSummary(now)
+-- the first check after login is done (everyone has a status, or enough time passed):
+-- from then on, logins and logouts are announced
+local function MaybeFirstCheckDone(now)
 	if Notify.ready or not loginAt then return end
 	local done = true
 	for _, key in ipairs(Data.Visible()) do
 		if Data.status[key] == nil then done = false break end
 	end
-	if done or now - loginAt >= SUMMARY_MAX_WAIT then Notify.Summary() end
+	if done or now - loginAt >= SUMMARY_MAX_WAIT then Notify.FirstCheckDone() end
 end
 
 local function Tick()
@@ -172,7 +174,7 @@ local function Tick()
 		end
 	end
 
-	MaybeSummary(now)
+	MaybeFirstCheckDone(now)
 
 	-- group members' zones (they move around); cheap, and fine in combat or instances
 	if now - lastGroupScan >= GROUP_SCAN and Presence.ScanGroup then

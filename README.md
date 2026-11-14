@@ -21,7 +21,7 @@ It works with any character, whether or not they use the addon.
 - **One-click actions.** Double-click a friend to whisper them; use the buttons or the right-click
   menu to **Invite**, **Who**, **Set Note** or **Remove**.
 - **Login and logout notifications.** A chat line and a sound when a friend comes online, a line
-  when they go offline, and one summary line after you log in.
+  when they go offline.
 - **Shortcut and options.** **Shift-O** opens the list. The gear in the window (or `/ofl config`)
   opens the options: level and zone in the list, class colors, notifications, minimap button and
   the key binding.
