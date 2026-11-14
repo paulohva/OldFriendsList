@@ -126,11 +126,9 @@ if locale == "ptBR" then
 	L["O opens the Social window again, and Shift-O Old Friends List."] =
 		"O O voltou a abrir a janela de amigos, e o Shift-O a Old Friends List."
 	L["Show Old Friends in the Social window (O)"] = "Mostrar os Old Friends na janela de amigos (O)"
-	L["Your Old Friends appear as a group above Favorites in the game's friends window. Shift-O still opens the separate window."] =
-		"Seus Old Friends aparecem como um grupo acima dos Favoritos na janela de amigos do jogo. O Shift-O continua abrindo a janela separada."
-	L["Use O for Old Friends List"] = "Usar o O para a Old Friends List"
-	L["O opens Old Friends List and Shift-O the game's Social window. Turn it off to swap them back."] =
-		"O O abre a Old Friends List e o Shift-O a janela de amigos do jogo. Desligue para destrocar."
+	L["Your Old Friends appear together with the game's friends list, shown first. Shift-O still opens the separate window."] =
+		"Seus Old Friends aparecem junto com a lista de amigos do jogo, em primeiro lugar. O Shift-O continua abrindo a janela separada."
+	L["Advanced"] = "Avançado"
 	L["First-time setup"] = "Configuração inicial"
 	L["Run the setup again"] = "Refazer a configuração"
 	L["Choose again between your Old Friends in the Social window or a separate window."] =
@@ -145,8 +143,13 @@ if locale == "ptBR" then
 	L["Separate window"] = "Janela separada"
 	L["A classic friends window of its own, opened with Shift-O."] = "Uma janela de amigos clássica, só dela, aberta com Shift-O."
 	L["Use O instead (the Social window moves to Shift-O)"] = "Usar o O (a janela de amigos passa para o Shift-O)"
-	L["You can change this anytime in Options > AddOns > Old Friends List."] =
-		"Você pode mudar isso a qualquer momento em Opções > AddOns > Old Friends List."
+	L["Closing keeps everything as it is."] = "Fechar mantém tudo como está."
+	L["Change it anytime in Options > AddOns > Old Friends List."] = "Mude quando quiser em Opções > AddOns > Old Friends List."
+	L["New: your Old Friends can also appear in the game's Social window. Nothing changes unless you pick it."] =
+		"Novidade: seus Old Friends também podem aparecer na janela de amigos do jogo. Nada muda a não ser que você escolha isso."
+	L["(what you have now: nothing changes)"] = "(o que você tem agora: nada muda)"
+	L["Keep as it is"] = "Manter como está"
+	L["Nothing changed: Old Friends List keeps its own window (%s)."] = "Nada mudou: a Old Friends List continua na sua própria janela (%s)."
 	L["show the first-time setup again"] = "mostra de novo a configuração inicial"
 	L["Show the Old Friends List button around the minimap."] = "Mostra o botão da Old Friends List ao redor do minimapa."
 	L["Share my zone with friends"] = "Compartilhar minha zona com amigos"

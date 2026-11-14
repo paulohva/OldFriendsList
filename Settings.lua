@@ -190,15 +190,11 @@ end
 local function AddSocialSection(layout)
 	AddHeader(layout, L["Social window"])
 	AddProxyCheckbox("integrated", L["Show Old Friends in the Social window (O)"],
-		L["Your Old Friends appear as a group above Favorites in the game's friends window. Shift-O still opens the separate window."],
+		L["Your Old Friends appear together with the game's friends list, shown first. Shift-O still opens the separate window."],
 		false,
 		function() return ns.db.settings.socialMode == "integrated" end,
 		function(value) Options.SetMode(value and "integrated" or "separate") end)
-	AddProxyCheckbox("swapKeys", L["Use O for Old Friends List"],
-		L["O opens Old Friends List and Shift-O the game's Social window. Turn it off to swap them back."],
-		false,
-		function() return Options.IsSwapped() end,
-		function(value) if value ~= Options.IsSwapped() then Options.ApplySwap(value) end end)
+	-- (which key opens what is changed in the Key Binding section below; the setup also offers the swap)
 	AddCheckbox("socialIcon", L["Show in the Social window"],
 		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when your Old Friends are already in that window."],
 		function() if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end end)
@@ -223,10 +219,10 @@ local function Build()
 		if not ok then ns.Debug("settings: %s", tostring(err)) end
 	end
 
-	-- both keys, ours and the game's Social window, to compare and change
-	Try(AddHeader, layout, L["Key Binding"])
-	Try(AddKeybinding, layout, ns.BINDING, true)
-	Try(AddKeybinding, layout, ns.SOCIAL_BINDING, false)
+	Try(AddHeader, layout, L["General"])
+	Try(AddMinimapCheckbox)
+	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
+		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
 
 	Try(AddSocialSection, layout)
 
@@ -241,10 +237,12 @@ local function Build()
 	Try(AddCheckbox, "notifyOffline", L["Offline messages"], L["Show a message in chat when a friend logs out."])
 	Try(AddCheckbox, "sound", L["Login sound"], L["Play a sound when a friend comes online."])
 
-	Try(AddHeader, layout, L["General"])
-	Try(AddMinimapCheckbox)
-	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
-		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
+	-- both keys, ours and the game's Social window, to compare and change (or swap)
+	Try(AddHeader, layout, L["Key Binding"])
+	Try(AddKeybinding, layout, ns.BINDING, true)
+	Try(AddKeybinding, layout, ns.SOCIAL_BINDING, false)
+
+	Try(AddHeader, layout, L["Advanced"])
 	Try(AddIntervalSlider)
 
 	Settings.RegisterAddOnCategory(category)

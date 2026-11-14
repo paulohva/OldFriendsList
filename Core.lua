@@ -150,6 +150,8 @@ ns.On("ADDON_LOADED", function(name)
 	-- 0.3.0: Social window integration; the defaults (separate window, setup not done yet)
 	-- come from DEFAULTS below, so updating players also get the first-time setup
 	if db.version < 4 then
+		-- an existing install: the setup says clearly that nothing changes unless they choose it
+		db.settings.setupFromUpdate = true
 		db.version = 4
 	end
 	db.friends = db.friends or {}

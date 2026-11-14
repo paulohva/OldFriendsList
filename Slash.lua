@@ -27,6 +27,7 @@ local function Help()
 	Line("list", L["print the list with who's online"])
 	Line("config", L["open the options (settings and key binding)"])
 	Line("minimap", L["show or hide the minimap button"])
+	Line("setup", L["show the first-time setup again"])
 	print(GREY .. "  /ofl advanced - " .. L["all commands"] .. "|r")
 end
 
