@@ -109,8 +109,45 @@ if locale == "ptBR" then
 	L["Play a sound when a friend comes online."] = "Toca um som quando um amigo fica online."
 	L["Show minimap button"] = "Mostrar botão no minimapa"
 	L["Show in the Social window"] = "Mostrar na janela de amigos"
-	L["Adds an Old Friends List tab under the tabs of the game's Social window (O)."] =
-		"Acrescenta uma aba da Old Friends List por baixo das abas da janela de amigos do jogo (O)."
+	L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when your Old Friends are already in that window."] =
+		"Acrescenta uma aba da Old Friends List abaixo das abas da janela de amigos do jogo (O). Não aparece quando seus Old Friends já estão nessa janela."
+
+	-- Social window integration, key swap and first-time setup (0.3.0)
+	L["Social window"] = "Janela de amigos"
+	L["Old Friends List %d/%d"] = "Old Friends List %d/%d"
+	L["Couldn't add your friends to the Social window; using the separate window."] =
+		"Não foi possível adicionar seus amigos à janela de amigos; usando a janela separada."
+	L["Key bindings can't change in combat. Try again after the fight."] =
+		"Os atalhos não podem ser alterados em combate. Tente de novo depois da luta."
+	L["%s is used for \"%s\", so the keys weren't swapped. Change them in Options > AddOns > Old Friends List."] =
+		"%s está sendo usado para \"%s\", por isso as teclas não foram trocadas. Mude-as em Opções > AddOns > Old Friends List."
+	L["O now opens Old Friends List, and Shift-O the Social window."] =
+		"Agora o O abre a Old Friends List, e o Shift-O a janela de amigos."
+	L["O opens the Social window again, and Shift-O Old Friends List."] =
+		"O O voltou a abrir a janela de amigos, e o Shift-O a Old Friends List."
+	L["Show Old Friends in the Social window (O)"] = "Mostrar os Old Friends na janela de amigos (O)"
+	L["Your Old Friends appear as a group above Favorites in the game's friends window. Shift-O still opens the separate window."] =
+		"Seus Old Friends aparecem como um grupo acima dos Favoritos na janela de amigos do jogo. O Shift-O continua abrindo a janela separada."
+	L["Use O for Old Friends List"] = "Usar o O para a Old Friends List"
+	L["O opens Old Friends List and Shift-O the game's Social window. Turn it off to swap them back."] =
+		"O O abre a Old Friends List e o Shift-O a janela de amigos do jogo. Desligue para destrocar."
+	L["First-time setup"] = "Configuração inicial"
+	L["Run the setup again"] = "Refazer a configuração"
+	L["Choose again between your Old Friends in the Social window or a separate window."] =
+		"Escolha de novo entre os Old Friends na janela de amigos ou numa janela separada."
+	L["Your Old Friends now appear in the Social window (O). Shift-O still opens the separate window."] =
+		"Seus Old Friends agora aparecem na janela de amigos (O). O Shift-O continua abrindo a janela separada."
+	L["Old Friends List opens in its own window (%s)."] = "A Old Friends List abre na sua própria janela (%s)."
+	L["(your current choice)"] = "(sua escolha atual)"
+	L["Choose"] = "Escolher"
+	L["How would you like to see your Old Friends?"] = "Como você quer ver seus Old Friends?"
+	L["In the Social window (O)"] = "Na janela de amigos (O)"
+	L["Separate window"] = "Janela separada"
+	L["A classic friends window of its own, opened with Shift-O."] = "Uma janela de amigos clássica, só dela, aberta com Shift-O."
+	L["Use O instead (the Social window moves to Shift-O)"] = "Usar o O (a janela de amigos passa para o Shift-O)"
+	L["You can change this anytime in Options > AddOns > Old Friends List."] =
+		"Você pode mudar isso a qualquer momento em Opções > AddOns > Old Friends List."
+	L["show the first-time setup again"] = "mostra de novo a configuração inicial"
 	L["Show the Old Friends List button around the minimap."] = "Mostra o botão da Old Friends List ao redor do minimapa."
 	L["Share my zone with friends"] = "Compartilhar minha zona com amigos"
 	L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."] =

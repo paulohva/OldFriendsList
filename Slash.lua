@@ -46,6 +46,7 @@ local function Advanced()
 	Line("zone on|off", L["share your zone with friends who use the addon"])
 	Line("interval " .. L["<seconds>"], L["how often each friend is checked (15-300)"])
 	Line("minimap", L["show or hide the minimap button"])
+	Line("setup", L["show the first-time setup again"])
 	Line("ping " .. NAME, L["check one character now and print the result"])
 	Line("diag", L["check which game APIs this client has"])
 	Line("debug", L["toggle debug messages"])
@@ -115,6 +116,8 @@ local function Diag()
 			tostring(key and Presence.RosterZone(key)), tostring(Presence.MapZone("party1"))))
 	end
 	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
+	print("  " .. ns.SocialList.Info())
+	print("  O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
 	local can, why = ns.Comm.CanSend()
 	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))
 end
@@ -183,6 +186,8 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		Presence.PingNow(key)
 	elseif cmd == "diag" then
 		Diag()
+	elseif cmd == "setup" then
+		ns.Setup.Show()
 	else
 		Help()
 	end

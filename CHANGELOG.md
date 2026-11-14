@@ -4,6 +4,19 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.0
+
+- **Old Friends in the Social window (O):** optionally, your Old Friends appear as a group
+  "Old Friends List x/y" above Favorites in the game's friends window, collapsible like the
+  others, with level, class, zone and the same right-click menu. Shift-O still opens the
+  separate window. If a game update changes that window, the addon falls back to its own window.
+- **First-time setup:** on the first login you choose between the Social window and a separate
+  window, with a picture of each. The separate window can take **O** (the Social window moves
+  to Shift-O). Run it again with `/ofl setup` or from the options.
+- **Options:** both keys (Old Friends List and the game's Social window) in the Key Binding
+  section; new **Social window** section with the mode, the key swap and the tab.
+- The Social window tab is hidden when your Old Friends are already in that window.
+
 ## 0.2.1
 
 - Friends in your group now show their **zone** without a **Who**, and it follows them as they

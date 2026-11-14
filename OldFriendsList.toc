@@ -21,6 +21,9 @@ Menus.lua
 UI\Row.xml
 UI\MainFrame.lua
 UI\SocialTab.lua
+UI\SocialRow.xml
+UI\SocialList.lua
+UI\Setup.lua
 Minimap.lua
 Settings.lua
 Slash.lua

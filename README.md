@@ -25,6 +25,9 @@ It works with any character, whether or not they use the addon.
 - **Shortcut and options.** **Shift-O** opens the list. The gear in the window (or `/ofl config`)
   opens the options: level and zone in the list, class colors, notifications, minimap button and
   the key binding.
+- **In the game's Social window (optional).** Your Old Friends can appear as a group above
+  Favorites in the friends window (O), or the separate window can take the O key. You choose on
+  first login (`/ofl setup` to choose again).
 - **Minimap button.** Hover it to see who's online; click to open the list, right-click for quick
   settings. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
