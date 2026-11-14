@@ -100,7 +100,7 @@ local function Build()
 	if ButtonFrameTemplate_HideButtonBar then pcall(ButtonFrameTemplate_HideButtonBar, frame) end
 	if frame.Inset then frame.Inset:Hide() end
 	if frame.SetTitle then frame:SetTitle(ns.NAME) end
-	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, ns.ICON) end
+	if frame.SetPortraitToAsset then pcall(frame.SetPortraitToAsset, frame, ns.PORTRAIT) end
 
 	-- closing without choosing keeps things as they are (separate window) and counts as done
 	local close = frame.CloseButton or _G["OldFriendsListSetupFrameCloseButton"]

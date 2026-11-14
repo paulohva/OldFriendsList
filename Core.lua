@@ -8,6 +8,7 @@ ns.NAME = "Old Friends List"
 ns.PREFIX = "OFL"            -- addon message prefix
 ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
+ns.PORTRAIT = "Interface\\AddOns\\OldFriendsList\\Media\\Portrait"   -- the windows' portrait (inside Blizzard's ring)
 
 local DB_VERSION = 4
 ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)

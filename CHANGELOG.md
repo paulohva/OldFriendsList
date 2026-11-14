@@ -4,6 +4,10 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.3
+
+- New portrait artwork for the Old Friends List window and the first-time setup.
+
 ## 0.3.2
 
 - No more summary line on every login ("Old Friends List: 1 friend online: ..."). Friends who
