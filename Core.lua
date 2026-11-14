@@ -9,9 +9,11 @@ ns.PREFIX = "OFL"            -- addon message prefix
 ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
 
-local DB_VERSION = 3
+local DB_VERSION = 4
 ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)
 ns.DEFAULT_KEY = "SHIFT-O"
+ns.SOCIAL_BINDING = "TOGGLESOCIAL"     -- Blizzard's Social window binding
+ns.SOCIAL_KEY = "O"
 local DEFAULTS = {
 	notifyOnline = true,
 	notifyOffline = true,
@@ -21,6 +23,10 @@ local DEFAULTS = {
 	showDetails = true,      -- list: level, class and zone under each name
 	classColors = false,     -- names in class colors (list, tooltips, chat)
 	socialIcon = false,      -- icon in the game's Social window that opens the list (opt-in)
+	socialMode = "separate", -- "integrated": Old Friends as a group in the game's Social window (O)
+	swapKeys = false,        -- O opens Old Friends List, Shift-O the game's Social window
+	setupDone = false,       -- the first-time setup (integrated or separate) was shown
+	socialCollapsed = false, -- the Old Friends group in the Social window is collapsed
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
@@ -140,6 +146,13 @@ ns.On("ADDON_LOADED", function(name)
 	if db.version < 3 then
 		db.settings.socialIcon = false
 		db.version = 3
+	end
+	-- 0.3.0: Social window integration; the defaults (separate window, setup not done yet)
+	-- come from DEFAULTS below, so updating players also get the first-time setup
+	if db.version < 4 then
+		-- an existing install: the setup says clearly that nothing changes unless they choose it
+		db.settings.setupFromUpdate = true
+		db.version = 4
 	end
 	db.friends = db.friends or {}
 	db.settings = db.settings or {}
