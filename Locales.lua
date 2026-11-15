@@ -144,8 +144,6 @@ if locale == "ptBR" then
 	L["A classic friends window of its own, opened with Shift-O."] = "Uma janela de amigos clássica, só dela, aberta com Shift-O."
 	L["Use O to open this window (the game's friends window moves to Shift-O)"] =
 		"Usar o O para abrir esta janela (a janela de amigos do jogo passa para o Shift-O)"
-	L["Closing keeps everything as it is."] = "Fechar mantém tudo como está."
-	L["Change it anytime in Options > AddOns > Old Friends List."] = "Mude quando quiser em Opções > AddOns > Old Friends List."
 	L["New: your Old Friends can also appear in the game's Social window. Nothing changes unless you pick it."] =
 		"Novidade: seus Old Friends também podem aparecer na janela de amigos do jogo. Nada muda a não ser que você escolha isso."
 	L["(what you have now: nothing changes)"] = "(o que você tem agora: nada muda)"

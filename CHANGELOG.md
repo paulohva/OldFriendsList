@@ -4,6 +4,16 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.5
+
+- Social window: when the Old Friends List group has more friends than fit and scrolls, its
+  scroll bar now sits in the same column as the game's own scroll bar, to the right of the
+  cards, instead of over the cards' edge; the cards keep their full width.
+- First-time setup: the two pictures are now real screenshots of each choice (your Old Friends
+  in the Social window, and the separate window), instead of drawings, and they're bigger. The
+  window keeps its size: the lines at the bottom ("Closing keeps everything as it is", "Change it
+  anytime in Options…") are gone to make room.
+
 ## 0.3.4
 
 - New icon, matching the new logo: on the minimap button, the Social window tab, the addon list

@@ -30,6 +30,10 @@ local END_GAP = 0
 local COLLAPSED_END_GAP = -2
 local DOT_MARGIN = 6               -- room for the status dots, centred on the cards' top-left corner
 local HEADER_GAP = 8               -- header to first card, same as Blizzard's Favorites
+-- our scroll bar goes where Blizzard puts its own, next to its list: right of the list, from
+-- just below its top to just above its bottom (its template: x 5, top -7, bottom 4). Read from
+-- Blizzard's scroll bar anchors when they're the usual kind, so we follow if they change.
+local BAR_X, BAR_TOP, BAR_BOTTOM = 5, -7, 4
 
 local list            -- SocialUIFrame.FriendsList
 local section, header, scrollBox, scrollBar, view
@@ -166,11 +170,11 @@ function SocialList.Layout()
 	local scrolls = rows > 0 and #keys > MAX_ROWS
 	scrollBox:SetShown(rows > 0)
 	scrollBar:SetShown(scrolls)
-	-- full width like Blizzard's cards, unless our own scroll bar needs the room
+	-- full width like Blizzard's cards (our scroll bar sits to their right, like Blizzard's)
 	scrollBox:ClearAllPoints()
 	-- (the list has an inner margin so the status dots, which sit on the cards' corner, aren't clipped)
 	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", -DOT_MARGIN, DOT_MARGIN - HEADER_GAP)
-	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", scrolls and -12 or 0, DOT_MARGIN - HEADER_GAP)
+	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, DOT_MARGIN - HEADER_GAP)
 	if rows > 0 then
 		scrollBox:SetHeight(DOT_MARGIN + rows * (ROW_HEIGHT + ROW_SPACING))
 		local items = {}
@@ -246,10 +250,22 @@ local function Build()
 
 	scrollBox = CreateFrame("Frame", nil, section, "WowScrollBoxList")
 	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
-	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", -12, -2)
+	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, -2)
+
+	-- the scroll bar in Blizzard's scroll bar column: the section has the width and the top of
+	-- Blizzard's list, so the same offsets from the section put it exactly where Blizzard's own
+	-- would be. Its bottom follows our cards (the list's right edge is PAD_RIGHT in from the section's).
+	for _, p in ipairs(saved[list.ScrollBar] or {}) do
+		local point, relativeTo, relativePoint, x, y = p[1], p[2], p[3], p[4], p[5]
+		if relativeTo == list.ScrollBox and point == "TOPLEFT" and relativePoint == "TOPRIGHT" then
+			BAR_X, BAR_TOP = x or 0, y or 0
+		elseif relativeTo == list.ScrollBox and point == "BOTTOMLEFT" and relativePoint == "BOTTOMRIGHT" then
+			BAR_BOTTOM = y or 0
+		end
+	end
 	scrollBar = CreateFrame("EventFrame", nil, section, "MinimalScrollBar")
-	scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 4, 0)
-	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 4, 0)
+	scrollBar:SetPoint("TOPLEFT", section, "TOPRIGHT", BAR_X, BAR_TOP)
+	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", BAR_X + PAD_RIGHT, BAR_BOTTOM)
 
 	view = CreateScrollBoxListLinearView()
 	view:SetElementExtent(ROW_HEIGHT)
