@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.4
+
+- New icon, matching the new logo: on the minimap button, the Social window tab, the addon list
+  and the addon compartment.
+
 ## 0.3.3
 
 - New portrait artwork for the Old Friends List window and the first-time setup.
