@@ -16,7 +16,12 @@ ns.Setup = Setup
 
 local IMAGE_INTEGRATED = "Interface\\AddOns\\OldFriendsList\\Media\\SetupIntegrated"
 local IMAGE_SEPARATE = "Interface\\AddOns\\OldFriendsList\\Media\\SetupSeparate"
-local CARD_WIDTH, CARD_HEIGHT = 290, 330
+-- the pictures are 4:3 screenshots at the top of 512x512 textures: only that part is shown
+local PICTURE_SHAPE, PICTURE_TEXCOORD = 3 / 4, 384 / 512
+local FRAME_HEIGHT = 508
+local CARDS_TOP, CARDS_MARGIN = 110, 16
+local CARD_WIDTH = 290
+local CARD_HEIGHT = FRAME_HEIGHT - CARDS_TOP - CARDS_MARGIN   -- the cards go down to the frame's bottom margin
 
 local frame, cards, swapCheck
 
@@ -54,9 +59,10 @@ local function MakeCard(parent, image, title, text, mode)
 	card:SetSize(CARD_WIDTH, CARD_HEIGHT)
 
 	local picture = card:CreateTexture(nil, "ARTWORK")
-	picture:SetSize(CARD_WIDTH - 24, (CARD_WIDTH - 24) / 2)
+	picture:SetSize(CARD_WIDTH - 24, (CARD_WIDTH - 24) * PICTURE_SHAPE)
 	picture:SetPoint("TOP", card, "TOP", 0, -12)
 	picture:SetTexture(image)
+	picture:SetTexCoord(0, 1, 0, PICTURE_TEXCOORD)
 
 	local titleText = card:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	titleText:SetPoint("TOP", picture, "BOTTOM", 0, -12)
@@ -87,7 +93,7 @@ end
 
 local function Build()
 	frame = CreateFrame("Frame", "OldFriendsListSetupFrame", UIParent, "ButtonFrameTemplate")
-	frame:SetSize(CARD_WIDTH * 2 + 48, CARD_HEIGHT + 178)
+	frame:SetSize(CARD_WIDTH * 2 + 48, FRAME_HEIGHT)
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("FULLSCREEN_DIALOG")
 	frame:SetToplevel(true)
@@ -121,11 +127,11 @@ local function Build()
 	local integrated = MakeCard(frame, IMAGE_INTEGRATED, L["In the Social window (O)"],
 		L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."],
 		"integrated")
-	integrated:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -110)
+	integrated:SetPoint("TOPLEFT", frame, "TOPLEFT", CARDS_MARGIN, -CARDS_TOP)
 
 	local separate = MakeCard(frame, IMAGE_SEPARATE, L["Separate window"],
 		L["A classic friends window of its own, opened with Shift-O."], "separate")
-	separate:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -110)
+	separate:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -CARDS_MARGIN, -CARDS_TOP)
 
 	swapCheck = CreateFrame("CheckButton", nil, separate, "UICheckButtonTemplate")
 	swapCheck:SetSize(24, 24)
@@ -140,13 +146,6 @@ local function Build()
 	label:SetText(L["Use O to open this window (the game's friends window moves to Shift-O)"])
 
 	cards = { integrated, separate }
-
-	local footer = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 14)
-	footer:SetWidth(CARD_WIDTH * 2 - 40)
-	footer:SetJustifyH("CENTER")
-	footer:SetSpacing(2)
-	frame.Footer = footer   -- its text depends on whether there's something to keep (Setup.Show)
 
 	tinsert(UISpecialFrames, "OldFriendsListSetupFrame")
 	frame:Hide()
@@ -167,14 +166,6 @@ function Setup.Show()
 		card.Choose:SetText(isCurrent and L["Keep as it is"] or L["Choose"])
 	end
 	swapCheck:SetChecked(ns.Options.IsSwapped())
-	-- "closing keeps everything" only makes sense when there's something to keep:
-	-- players updating from an older version, or running the setup again; not a new install
-	local change = L["Change it anytime in Options > AddOns > Old Friends List."]
-	if updating or s.setupDone then
-		frame.Footer:SetText(L["Closing keeps everything as it is."] .. "\n" .. change)
-	else
-		frame.Footer:SetText(change)
-	end
 	frame:Show()
 end
 
