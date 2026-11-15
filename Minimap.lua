@@ -11,6 +11,10 @@ ns.MinimapButton = MinimapButton
 
 local button
 
+-- the centre of the border ring's opening, from the button's top-left corner, and the icon's size
+local RING_X, RING_Y = 17.8, -16.7
+local ICON_SIZE = 22
+
 local function SetAngle(angle)
 	ns.db.settings.minimapAngle = angle
 	local rad = math.rad(angle)
@@ -76,15 +80,17 @@ local function Build()
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button:RegisterForDrag("LeftButton")
 
+	-- the ring's opening isn't centred on the 31x31 button: icon and background are centred on it
+	-- (measured in game), and the icon fills it
 	local background = button:CreateTexture(nil, "BACKGROUND")
 	background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
-	background:SetSize(20, 20)
-	background:SetPoint("TOPLEFT", 7, -5)
+	background:SetSize(ICON_SIZE + 2, ICON_SIZE + 2)
+	background:SetPoint("CENTER", button, "TOPLEFT", RING_X, RING_Y)
 
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(ns.ICON)
-	icon:SetSize(18, 18)
-	icon:SetPoint("TOPLEFT", 7, -6)
+	icon:SetSize(ICON_SIZE, ICON_SIZE)
+	icon:SetPoint("CENTER", button, "TOPLEFT", RING_X, RING_Y)
 	if icon.SetMask then pcall(icon.SetMask, icon, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
 	button.icon = icon
 
@@ -103,8 +109,8 @@ local function Build()
 	button:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
 	button:SetScript("OnEnter", ShowTooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	button:SetScript("OnMouseDown", function() icon:SetSize(16, 16) end)
-	button:SetScript("OnMouseUp", function() icon:SetSize(18, 18) end)
+	button:SetScript("OnMouseDown", function() icon:SetSize(ICON_SIZE - 2, ICON_SIZE - 2) end)
+	button:SetScript("OnMouseUp", function() icon:SetSize(ICON_SIZE, ICON_SIZE) end)
 
 	SetAngle(ns.db.settings.minimapAngle or 210)
 end
