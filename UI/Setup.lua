@@ -16,8 +16,10 @@ ns.Setup = Setup
 
 local IMAGE_INTEGRATED = "Interface\\AddOns\\OldFriendsList\\Media\\SetupIntegrated"
 local IMAGE_SEPARATE = "Interface\\AddOns\\OldFriendsList\\Media\\SetupSeparate"
--- the pictures are 4:3 screenshots at the top of 512x512 textures: only that part is shown
-local PICTURE_SHAPE, PICTURE_TEXCOORD = 3 / 4, 384 / 512
+-- the pictures are 4:3 screenshots, 384x288 (24-bit): the whole texture is the picture
+-- (PICTURE_U, PICTURE_V: how much of the texture is the picture, if it ever sits in a bigger one)
+local PICTURE_SHAPE = 3 / 4
+local PICTURE_U, PICTURE_V = 1, 1
 local FRAME_HEIGHT = 508
 local CARDS_TOP, CARDS_MARGIN = 110, 16
 local CARD_WIDTH = 290
@@ -62,7 +64,7 @@ local function MakeCard(parent, image, title, text, mode)
 	picture:SetSize(CARD_WIDTH - 24, (CARD_WIDTH - 24) * PICTURE_SHAPE)
 	picture:SetPoint("TOP", card, "TOP", 0, -12)
 	picture:SetTexture(image)
-	picture:SetTexCoord(0, 1, 0, PICTURE_TEXCOORD)
+	picture:SetTexCoord(0, PICTURE_U, 0, PICTURE_V)
 
 	local titleText = card:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	titleText:SetPoint("TOP", picture, "BOTTOM", 0, -12)

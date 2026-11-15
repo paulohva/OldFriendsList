@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.6
+
+- Smaller download and install: the first-time setup pictures are stored at 75% of their size
+  and without the unused parts (the addon goes from about 2.4 MB to about 1.1 MB installed).
+
 ## 0.3.5
 
 - Social window: when the Old Friends List group has more friends than fit and scrolls, its
