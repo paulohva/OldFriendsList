@@ -118,6 +118,7 @@ local function Diag()
 	end
 	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
 	print("  " .. ns.SocialList.Info())
+	print("  " .. ns.Guild.Info())
 	print("  O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
 	local can, why = ns.Comm.CanSend()
 	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))

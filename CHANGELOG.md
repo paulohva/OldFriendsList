@@ -4,6 +4,16 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.7
+
+- No more double "has come online" / "has gone offline" lines for friends in your guild. With
+  the game's Guild member alert on (Options > Social), the game already prints those lines for
+  guild members, so Old Friends List leaves them to it. The login sound still plays, so you know
+  it's someone from your list. `/ofl diag` shows whether the alert is on.
+- Fixed the "Old Friends List tried to perform an action that was blocked" error when typing in
+  the Options search box. The Key Binding section of the addon's options is now a button that
+  opens the game's Key Bindings, where Old Friends List is listed under AddOns.
+
 ## 0.3.6
 
 - Smaller download and install: the first-time setup pictures are stored at 75% of their size

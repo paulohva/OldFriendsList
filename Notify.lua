@@ -48,11 +48,15 @@ local function Blizzard(name, count)
 	return nil
 end
 
--- the game's own "|Hplayer:%s|h[%s]|h has come online." (already in the client's language)
+-- the game's own "|Hplayer:%s|h[%s]|h has come online." (already in the client's language).
+-- A friend in your guild, with the game's guild member alert on, already gets that line
+-- from the game: only the sound then (it tells you it's someone from your list).
 function Notify.Online(key)
 	if not ns.db.settings.notifyOnline then return end
 	local blizzard = Blizzard("ERR_FRIEND_ONLINE_SS", 2)
-	if blizzard then
+	if ns.Guild.Announces(key) then
+		ns.Debug("%s: online line left to the guild alert", key)
+	elseif blizzard then
 		local f = Data.Get(key)
 		local c = f and Data.ClassColor(f.class)
 		local display = Data.Display(key)
@@ -67,6 +71,10 @@ end
 -- the game's own "%s has gone offline."
 function Notify.Offline(key)
 	if not ns.db.settings.notifyOffline then return end
+	if ns.Guild.Announces(key) then
+		ns.Debug("%s: offline line left to the guild alert", key)
+		return
+	end
 	local blizzard = Blizzard("ERR_FRIEND_OFFLINE_S", 1)
 	SystemLine((blizzard or ns.L["%s has gone offline."]):format(PlayerLink(key)))
 end

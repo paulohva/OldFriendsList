@@ -163,21 +163,20 @@ local function AddHeader(layout, text)
 	end
 end
 
--- a native key binding row for a binding command (ours, or the game's Social window)
-local function AddKeybinding(layout, command, isOurs)
-	local index = C_KeyBindings and C_KeyBindings.GetBindingIndex and C_KeyBindings.GetBindingIndex(command)
-	if index and CreateKeybindingEntryInitializer then
-		local initializer = CreateKeybindingEntryInitializer(index, true)
-		if initializer.AddSearchTags then initializer:AddSearchTags("key", "keybind", "shortcut", "hotkey", "social") end
-		layout:AddInitializer(initializer)
-		return
-	end
-	-- older settings UI: send people to the game's Key Bindings instead
-	if isOurs and CreateSettingsButtonInitializer then
-		layout:AddInitializer(CreateSettingsButtonInitializer(L["Toggle Old Friends List"], ns.G("KEY_BINDINGS", "Key Bindings"),
-			function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
-			L["Set the key under Key Bindings > AddOns > Old Friends List."], true))
-	end
+-- A button to the game's Key Bindings, where our binding and the Social window's live.
+-- Not Blizzard's own key binding rows (CreateKeybindingEntryInitializer): built from
+-- addon code they carry addon-made functions and search tags, and the Options search
+-- runs those on every keystroke. That tainted the search, so the game blocked its next
+-- protected action and blamed Old Friends List. For the same reason nothing in this
+-- panel adds search tags (addSearchTags = false).
+local function AddKeybindingButton(layout)
+	if not CreateSettingsButtonInitializer then return end
+	layout:AddInitializer(CreateSettingsButtonInitializer(L["Toggle Old Friends List"], ns.G("KEY_BINDINGS", "Key Bindings"),
+		function()
+			local id = Settings.KEYBINDINGS_CATEGORY_ID
+			if id then pcall(Settings.OpenToCategory, id) end
+		end,
+		L["Set the key under Key Bindings > AddOns > Old Friends List."], false))
 end
 
 -- checkbox backed by a getter/setter instead of a saved field
@@ -194,14 +193,14 @@ local function AddSocialSection(layout)
 		false,
 		function() return ns.db.settings.socialMode == "integrated" end,
 		function(value) Options.SetMode(value and "integrated" or "separate") end)
-	-- (which key opens what is changed in the Key Binding section below; the setup also offers the swap)
+	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
 	AddCheckbox("socialIcon", L["Show in the Social window"],
 		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when your Old Friends are already in that window."],
 		function() if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end end)
 	if CreateSettingsButtonInitializer then
 		layout:AddInitializer(CreateSettingsButtonInitializer(L["First-time setup"], L["Run the setup again"],
 			function() if ns.Setup then ns.Setup.Show() end end,
-			L["Choose again between your Old Friends in the Social window or a separate window."], true))
+			L["Choose again between your Old Friends in the Social window or a separate window."], false))
 	end
 end
 
@@ -237,10 +236,8 @@ local function Build()
 	Try(AddCheckbox, "notifyOffline", L["Offline messages"], L["Show a message in chat when a friend logs out."])
 	Try(AddCheckbox, "sound", L["Login sound"], L["Play a sound when a friend comes online."])
 
-	-- both keys, ours and the game's Social window, to compare and change (or swap)
 	Try(AddHeader, layout, L["Key Binding"])
-	Try(AddKeybinding, layout, ns.BINDING, true)
-	Try(AddKeybinding, layout, ns.SOCIAL_BINDING, false)
+	Try(AddKeybindingButton, layout)
 
 	Try(AddHeader, layout, L["Advanced"])
 	Try(AddIntervalSlider)
