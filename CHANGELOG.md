@@ -4,6 +4,12 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 0.3.9
+
+- Friends in your guild: with the game's Guild member alert on, the game plays its own sound
+  when they log in, so Old Friends List no longer plays its login sound for them either. One
+  line and one sound, both from the game.
+
 ## 0.3.7
 
 - No more double "has come online" / "has gone offline" lines for friends in your guild. With

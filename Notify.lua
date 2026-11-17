@@ -50,13 +50,15 @@ end
 
 -- the game's own "|Hplayer:%s|h[%s]|h has come online." (already in the client's language).
 -- A friend in your guild, with the game's guild member alert on, already gets that line
--- from the game: only the sound then (it tells you it's someone from your list).
+-- and the game's sound: nothing from us then (there's no separate option for that sound).
 function Notify.Online(key)
 	if not ns.db.settings.notifyOnline then return end
-	local blizzard = Blizzard("ERR_FRIEND_ONLINE_SS", 2)
 	if ns.Guild.Announces(key) then
-		ns.Debug("%s: online line left to the guild alert", key)
-	elseif blizzard then
+		ns.Debug("%s: login left to the guild alert", key)
+		return
+	end
+	local blizzard = Blizzard("ERR_FRIEND_ONLINE_SS", 2)
+	if blizzard then
 		local f = Data.Get(key)
 		local c = f and Data.ClassColor(f.class)
 		local display = Data.Display(key)
