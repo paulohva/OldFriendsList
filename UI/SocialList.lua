@@ -277,11 +277,27 @@ local function BlizzardExtent()
 	return math.ceil(extent)
 end
 
+-- Can't move or resize Blizzard's list right now? Only in combat, and only if the game protects
+-- it: frames it protects can't be moved by addons mid-fight. Its friends list isn't protected,
+-- so it normally follows straight away, even in combat. (Waiting for every fight to end left
+-- the list at the height of an empty list when the window was opened in combat after a
+-- /reload: Favorites and Friends vanished until the fight was over.)
+local function Locked()
+	if not Safe.InCombat() then return false end
+	for _, frame in ipairs({ list.ScrollBox, list.ScrollBar }) do
+		if frame then
+			local ok, protected = pcall(frame.IsProtected, frame)
+			if not ok or protected then return true end
+		end
+	end
+	return false
+end
+
 local lastTop, lastExtent
 -- Blizzard's list right under our group, as tall as its content; our scroll box follows
 local function SyncHeights()
 	if not engaged then return end
-	if Safe.InCombat() then pending = true return end
+	if Locked() then pending = true return end
 	local extent = BlizzardExtent() or math.ceil(viewport:GetHeight())
 	local box = list.ScrollBox
 	if lastTop ~= sectionHeight then
@@ -313,7 +329,7 @@ end
 -- moves Blizzard's list into our scroll box (and its scroll bar out of sight)
 local function Engage()
 	if engaged then return true end
-	if Safe.InCombat() then pending = true return false end
+	if Locked() then pending = true return false end
 	local box, bar = list.ScrollBox, list.ScrollBar
 	original.boxParent, original.boxLevel = box:GetParent(), box:GetFrameLevel()
 	original.boxWheel = box:IsMouseWheelEnabled()
@@ -334,7 +350,7 @@ local function Disengage()
 		if viewport then viewport:Hide() viewportBar:Hide() end
 		return
 	end
-	if Safe.InCombat() then pending = true return end
+	if Locked() then pending = true return end
 	local box, bar = list.ScrollBox, list.ScrollBar
 	box:SetParent(original.boxParent or list)
 	if original.boxLevel then box:SetFrameLevel(original.boxLevel) end
