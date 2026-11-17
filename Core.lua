@@ -28,6 +28,8 @@ local DEFAULTS = {
 	swapKeys = false,        -- O opens Old Friends List, Shift-O the game's Social window
 	setupDone = false,       -- the first-time setup (integrated or separate) was shown
 	socialCollapsed = false, -- the Old Friends group in the Social window is collapsed
+	hideBNetDuplicates = false, -- Social window: hide Old Friends a Battle.net friend is playing right now
+	showBNet = false,        -- separate window: also list Battle.net friends playing this game
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
@@ -112,6 +114,21 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	end
 end)
 
+-- the game blocked something and blamed this addon: said in chat once per kind, and kept for
+-- /ofl diag (the function the game names, when, how many times)
+ns.blocked = {}
+local function OnBlocked(event, addon, func)
+	if addon ~= ADDON then return end
+	func = tostring(func or "?")
+	local seen = ns.blocked[func]
+	if seen then
+		seen.count, seen.last = seen.count + 1, date("%H:%M:%S")
+		return
+	end
+	ns.blocked[func] = { event = event, count = 1, last = date("%H:%M:%S") }
+	if ns.L then ns.Print(ns.L["The game blocked an action (%s). Please report it with the output of /ofl diag."], func) end
+end
+
 -- internal callbacks (ns.Fire("FRIENDS_CHANGED") etc.)
 local callbacks = {}
 
@@ -167,3 +184,6 @@ end)
 ns.On("PLAYER_LOGIN", function()
 	ns.Fire("LOGIN")
 end)
+
+ns.On("ADDON_ACTION_BLOCKED", function(...) OnBlocked("blocked", ...) end)
+ns.On("ADDON_ACTION_FORBIDDEN", function(...) OnBlocked("forbidden", ...) end)

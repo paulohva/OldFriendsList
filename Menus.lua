@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- Right-click menus: "Add to Old Friends" / "Remove from Old Friends" on player
+-- Right-click menus: "Add to Old Friends List" / "Remove from Old Friends List" on player
 -- portraits (target, focus, party, raid), names in chat and the guild roster
 --------------------------------------------------------------------------------
 
@@ -40,12 +40,12 @@ local function Modify(_, root, contextData)
 
 	root:CreateDivider()
 	if Data.Has(key) then
-		root:CreateButton(L["Remove from Old Friends"], function()
+		root:CreateButton(L["Remove from Old Friends List"], function()
 			Data.Remove(key)
 			ns.Print(L["Removed %s."], Data.Display(key))
 		end)
 	else
-		root:CreateButton(L["Add to Old Friends"], function()
+		root:CreateButton(L["Add to Old Friends List"], function()
 			local added, err = Data.Add(key, info)
 			if added then
 				ns.Print(L["Added %s."], Data.Display(added))

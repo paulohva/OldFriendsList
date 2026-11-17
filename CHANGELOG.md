@@ -4,6 +4,36 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.0.0
+
+- **One scroll bar in the Social window (O):** the Old Friends List group and the game's friends
+  list now scroll together, with a single scroll bar in the game's own column. The group shows
+  all your friends, with no scroll bar of its own.
+- **Invite button on the Old Friends List cards** in the Social window, like the game's own:
+  enabled when you can invite that friend right now. When you can't, its tooltip says why
+  (offline, already in your group, only the leader can invite, group full).
+- **"+" on the Old Friends List header** in the Social window: add a character without leaving
+  that window. With an empty list the header still shows, so you can add the first one.
+- **Battle.net friends:**
+  - A character on your Old Friends List that a Battle.net friend is playing right now shows as
+    online at once, with level, class and zone, even on the other faction.
+  - New option, off by default: **Hide friends already shown by Battle.net**. In the Social
+    window, such a character then shows only on the game's card, not twice.
+  - New option, off by default: **Show Battle.net friends playing WoW**. The separate window
+    also lists your Battle.net friends who are playing now. On your faction: whisper, invite,
+    Who and add to Old Friends List. On the other faction: a Battle.net whisper.
+  - Both options are in the first-time setup and in the options.
+- The separate window's **Invite** button follows the same rules as the cards.
+- **Key Bindings:** Old Friends List has its own group in the game's Key Bindings, instead of
+  being under AddOns.
+- **Always "Old Friends List":** menus, options and messages now use the full name, e.g.
+  right-click a player → **Add to Old Friends List**.
+- **First-time setup:** both buttons say **Choose**; the green line marks your current choice.
+- **Minimap button:** the right-click menu has just Open the list, Options and Hide minimap
+  button. Everything else is in the options.
+- If the game ever blocks an action and blames Old Friends List, it now says so in chat once,
+  and `/ofl diag` lists it, to make reporting easier.
+
 ## 0.3.9
 
 - Friends in your guild: with the game's Guild member alert on, the game plays its own sound

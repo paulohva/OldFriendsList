@@ -176,7 +176,7 @@ local function AddKeybindingButton(layout)
 			local id = Settings.KEYBINDINGS_CATEGORY_ID
 			if id then pcall(Settings.OpenToCategory, id) end
 		end,
-		L["Set the key under Key Bindings > AddOns > Old Friends List."], false))
+		L["Set the key under Key Bindings > Old Friends List."], false))
 end
 
 -- checkbox backed by a getter/setter instead of a saved field
@@ -188,19 +188,22 @@ end
 
 local function AddSocialSection(layout)
 	AddHeader(layout, L["Social window"])
-	AddProxyCheckbox("integrated", L["Show Old Friends in the Social window (O)"],
-		L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."],
+	AddProxyCheckbox("integrated", L["Show Old Friends List in the Social window (O)"],
+		L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."],
 		false,
 		function() return ns.db.settings.socialMode == "integrated" end,
 		function(value) Options.SetMode(value and "integrated" or "separate") end)
 	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
+	AddCheckbox("hideBNetDuplicates", L["Hide friends already shown by Battle.net"],
+		L["In the Social window, a character from your Old Friends List that a Battle.net friend is playing right now shows only on Blizzard's card, not in the Old Friends List group. It comes back when they log off or switch character."],
+		function() if ns.SocialList then ns.SocialList.Refresh() end end)
 	AddCheckbox("socialIcon", L["Show in the Social window"],
-		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when your Old Friends are already in that window."],
+		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when Old Friends List is already in that window."],
 		function() if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end end)
 	if CreateSettingsButtonInitializer then
 		layout:AddInitializer(CreateSettingsButtonInitializer(L["First-time setup"], L["Run the setup again"],
 			function() if ns.Setup then ns.Setup.Show() end end,
-			L["Choose again between your Old Friends in the Social window or a separate window."], false))
+			L["Choose again: Old Friends List in the Social window or in a separate window."], false))
 	end
 end
 
@@ -230,6 +233,9 @@ local function Build()
 		L["Show each friend's level, class and zone under their name. Turn it off to show only names."], RefreshList)
 	Try(AddCheckbox, "classColors", L["Class colors"],
 		L["Show friends' names in their class color, in the list, tooltips and chat messages."], RefreshList)
+	Try(AddCheckbox, "showBNet", L["Show Battle.net friends playing WoW"],
+		L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."],
+		RefreshList)
 
 	Try(AddHeader, layout, L["Notifications"])
 	Try(AddCheckbox, "notifyOnline", L["Online messages"], L["Show a message in chat when a friend logs in."])

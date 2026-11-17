@@ -1,5 +1,7 @@
 <Bindings>
-	<Binding name="OLDFRIENDSLIST_TOGGLE" header="OLDFRIENDSLIST" category="ADDONS">
+	<!-- its own group in the game's Key Bindings: the game shows the category as written when
+	     there's no global string by that name (not inside "AddOns") -->
+	<Binding name="OLDFRIENDSLIST_TOGGLE" category="Old Friends List">
 		OldFriendsList_Toggle()
 	</Binding>
 </Bindings>

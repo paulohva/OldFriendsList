@@ -25,7 +25,10 @@ local CARDS_TOP, CARDS_MARGIN = 110, 16
 local CARD_WIDTH = 290
 local CARD_HEIGHT = FRAME_HEIGHT - CARDS_TOP - CARDS_MARGIN   -- the cards go down to the frame's bottom margin
 
-local frame, cards, swapCheck
+local frame, cards, swapCheck, bnetCheck, duplicatesCheck
+
+-- the options under each card's text, above its button (from the bottom: 46, then 72)
+local CHECK_LOW, CHECK_HIGH = 46, 72
 
 local function Done()
 	ns.db.settings.setupDone = true
@@ -36,17 +39,23 @@ local function Choose(mode)
 	Done()
 	local Options = ns.Options
 	if mode == "integrated" then
+		ns.db.settings.hideBNetDuplicates = duplicatesCheck and duplicatesCheck:GetChecked() and true or false
 		Options.SetMode("integrated")
+		if ns.SocialList then ns.SocialList.Refresh() end
 		-- O is where the friends are now: give it back to the Social window if it was swapped
 		if Options.IsSwapped() then Options.ApplySwap(false) end
-		ns.Print(L["Your Old Friends now appear in the Social window (O). Shift-O still opens the separate window."])
+		ns.Print(L["Old Friends List now appears in the Social window (O). Shift-O still opens the separate window."])
 	else
 		local wasSeparate = ns.db.settings.socialMode ~= "integrated"
+		local wantBNet = bnetCheck and bnetCheck:GetChecked() and true or false
+		local bnetChanged = wantBNet ~= (ns.db.settings.showBNet and true or false)
+		ns.db.settings.showBNet = wantBNet
+		if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 		Options.SetMode("separate")
 		local wantSwap = swapCheck and swapCheck:GetChecked() and true or false
 		local swapChanged = wantSwap ~= Options.IsSwapped()
 		if swapChanged then Options.ApplySwap(wantSwap) end
-		if wasSeparate and not swapChanged then
+		if wasSeparate and not swapChanged and not bnetChanged then
 			ns.Print(L["Nothing changed: Old Friends List keeps its own window (%s)."], Options.KeyText() or "/ofl")
 		else
 			ns.Print(L["Old Friends List opens in its own window (%s)."], Options.KeyText() or "/ofl")
@@ -60,23 +69,24 @@ local function MakeCard(parent, image, title, text, mode)
 	local card = CreateFrame("Frame", nil, parent, "InsetFrameTemplate")
 	card:SetSize(CARD_WIDTH, CARD_HEIGHT)
 
+	-- (spacing kept tight so two options fit between the text and the button)
 	local picture = card:CreateTexture(nil, "ARTWORK")
 	picture:SetSize(CARD_WIDTH - 24, (CARD_WIDTH - 24) * PICTURE_SHAPE)
-	picture:SetPoint("TOP", card, "TOP", 0, -12)
+	picture:SetPoint("TOP", card, "TOP", 0, -10)
 	picture:SetTexture(image)
 	picture:SetTexCoord(0, PICTURE_U, 0, PICTURE_V)
 
 	local titleText = card:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-	titleText:SetPoint("TOP", picture, "BOTTOM", 0, -12)
+	titleText:SetPoint("TOP", picture, "BOTTOM", 0, -8)
 	titleText:SetText(title)
 
 	local current = card:CreateFontString(nil, "ARTWORK", "GameFontGreenSmall")
-	current:SetPoint("TOP", titleText, "BOTTOM", 0, -2)
+	current:SetPoint("TOP", titleText, "BOTTOM", 0, -1)
 	current:SetText(L["(your current choice)"])
 	card.Current = current
 
 	local body = card:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	body:SetPoint("TOP", current, "BOTTOM", 0, -8)
+	body:SetPoint("TOP", current, "BOTTOM", 0, -6)
 	body:SetWidth(CARD_WIDTH - 32)
 	body:SetJustifyH("CENTER")
 	body:SetText(text)
@@ -91,6 +101,22 @@ local function MakeCard(parent, image, title, text, mode)
 
 	card.mode = mode
 	return card
+end
+
+-- a checkbox with its label, `bottom` above the card's bottom edge
+local function MakeCheck(card, bottom, text)
+	local check = CreateFrame("CheckButton", nil, card, "UICheckButtonTemplate")
+	check:SetSize(24, 24)
+	check:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 16, bottom)
+	local label = check.Text or check.text
+	if not label then
+		label = check:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		label:SetPoint("LEFT", check, "RIGHT", 2, 0)
+	end
+	label:SetWidth(CARD_WIDTH - 60)
+	label:SetJustifyH("LEFT")
+	label:SetText(text)
+	return check
 end
 
 local function Build()
@@ -123,11 +149,11 @@ local function Build()
 	local intro = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	intro:SetPoint("TOP", question, "BOTTOM", 0, -6)
 	intro:SetWidth(CARD_WIDTH * 2)
-	intro:SetText(L["New: your Old Friends can also appear in the game's Social window. Nothing changes unless you pick it."])
+	intro:SetText(L["New: Old Friends List can also appear in the game's Social window. Nothing changes unless you pick it."])
 	frame.Intro = intro
 
 	local integrated = MakeCard(frame, IMAGE_INTEGRATED, L["In the Social window (O)"],
-		L["Your Old Friends appear together with the game's friends list. Shift-O still opens the separate window."],
+		L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."],
 		"integrated")
 	integrated:SetPoint("TOPLEFT", frame, "TOPLEFT", CARDS_MARGIN, -CARDS_TOP)
 
@@ -135,17 +161,10 @@ local function Build()
 		L["A classic friends window of its own, opened with Shift-O."], "separate")
 	separate:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -CARDS_MARGIN, -CARDS_TOP)
 
-	swapCheck = CreateFrame("CheckButton", nil, separate, "UICheckButtonTemplate")
-	swapCheck:SetSize(24, 24)
-	swapCheck:SetPoint("BOTTOMLEFT", separate, "BOTTOMLEFT", 16, 50)
-	local label = swapCheck.Text or swapCheck.text
-	if not label then
-		label = swapCheck:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-		label:SetPoint("LEFT", swapCheck, "RIGHT", 2, 0)
-	end
-	label:SetWidth(CARD_WIDTH - 60)
-	label:SetJustifyH("LEFT")
-	label:SetText(L["Use O to open this window (the game's friends window moves to Shift-O)"])
+	-- each card's options (off by default; they show what's set now)
+	duplicatesCheck = MakeCheck(integrated, CHECK_LOW, L["Hide friends already shown by Battle.net"])
+	bnetCheck = MakeCheck(separate, CHECK_HIGH, L["Show Battle.net friends playing WoW"])
+	swapCheck = MakeCheck(separate, CHECK_LOW, L["Use O to open this window (the game's friends window moves to Shift-O)"])
 
 	cards = { integrated, separate }
 
@@ -165,9 +184,11 @@ function Setup.Show()
 		local isCurrent = card.mode == mode and (s.setupDone or updating)
 		card.Current:SetShown(isCurrent and true or false)
 		card.Current:SetText(updating and L["(what you have now: nothing changes)"] or L["(your current choice)"])
-		card.Choose:SetText(isCurrent and L["Keep as it is"] or L["Choose"])
+		-- the button always says "Choose": the green line under the title already marks the current one
 	end
 	swapCheck:SetChecked(ns.Options.IsSwapped())
+	bnetCheck:SetChecked(s.showBNet and true or false)
+	duplicatesCheck:SetChecked(s.hideBNetDuplicates and true or false)
 	frame:Show()
 end
 

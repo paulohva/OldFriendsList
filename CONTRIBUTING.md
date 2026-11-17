@@ -34,12 +34,14 @@ Open an issue and include:
 | `Notify.lua` | Chat notifications and sound |
 | `Comm.lua` | Addon messages between players (`PING` / `PONG`) |
 | `Presence.lua` | The check scheduler, the hidden "No player named" filter, passive signals, `/who` |
+| `Guild.lua` | The guild roster and the game's guild member alert (no double login lines) |
+| `BattleNet.lua` | Battle.net friends playing this game: presence for listed characters, the Battle.net options |
 | `Menus.lua` | Right-click menu entries |
 | `Minimap.lua` | The minimap button |
 | `Settings.lua` | The options panel and the default key binding (Shift-O) |
 | `UI/` | The main window (`MainFrame.lua`) and its row template (`Row.xml`) |
 | `Slash.lua` | `/ofl` commands |
-| `UI/SocialList.lua`, `UI/SocialRow.xml` | The Old Friends group inside the game's Social window (O) |
+| `UI/SocialList.lua`, `UI/SocialRow.xml` | The Old Friends List group inside the game's Social window (O): one scroll with the game's list, invite buttons, the "+" |
 | `UI/SocialTab.lua` | The optional tab in the Social window |
 | `UI/Setup.lua` | The first-time setup (Social window or separate window) |
 

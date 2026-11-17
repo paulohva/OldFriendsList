@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- Minimap button: left-click opens the list, right-click for quick settings,
+-- Minimap button: left-click opens the list, right-click for the options or to hide it,
 -- drag to move it around the minimap. /ofl minimap shows or hides it.
 --------------------------------------------------------------------------------
 
@@ -51,21 +51,12 @@ local function ShowTooltip(self)
 	GameTooltip:Show()
 end
 
+-- right-click: just the list, the options (everything else lives there) and hiding the button
 local function OpenOptions(self)
 	if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
-	local s = ns.db.settings
-	local function Toggle(field) return function() s[field] = not s[field] end end
-	local function Is(field) return function() return s[field] end end
 	MenuUtil.CreateContextMenu(self, function(_, root)
 		root:CreateTitle(ns.NAME)
 		root:CreateButton(L["Open the list"], function() ns.UI.Toggle() end)
-		root:CreateButton(L["Add a friend..."], function() ns.Actions.AddPrompt() end)
-		root:CreateDivider()
-		root:CreateCheckbox(L["Online messages"], Is("notifyOnline"), Toggle("notifyOnline"))
-		root:CreateCheckbox(L["Offline messages"], Is("notifyOffline"), Toggle("notifyOffline"))
-		root:CreateCheckbox(L["Login sound"], Is("sound"), Toggle("sound"))
-		root:CreateCheckbox(L["Share my zone with friends"], Is("shareZone"), Toggle("shareZone"))
-		root:CreateDivider()
 		root:CreateButton(L["Settings and key binding..."], function() ns.Options.Open() end)
 		root:CreateButton(L["Hide minimap button"], function() MinimapButton.SetShown(false) end)
 	end)

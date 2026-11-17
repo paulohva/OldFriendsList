@@ -18,6 +18,7 @@ Guild.lua
 Notify.lua
 Comm.lua
 Presence.lua
+BattleNet.lua
 Menus.lua
 UI\Row.xml
 UI\MainFrame.lua
