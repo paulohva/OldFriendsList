@@ -1,8 +1,8 @@
 --------------------------------------------------------------------------------
 -- Guild: who's in your guild, and whether the game already announces their
--- logins. With the game's "Guild member alert" on, the game itself prints
--- "X has come online." / "X has gone offline." for guild members, so our own
--- line for a friend who is also a guild member would be a duplicate.
+-- logins. With the game's "Guild member alert" on, the game itself announces
+-- guild members ("X has come online." / "X has gone offline.", with its sound),
+-- so our own line and sound for a friend in the guild would be duplicates.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
