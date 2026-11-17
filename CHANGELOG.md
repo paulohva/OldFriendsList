@@ -4,6 +4,12 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.0.1
+
+- **Fix:** opening the Social window (O) in combat, soon after logging in or a `/reload`, could
+  leave Favorites and the friends list empty until the fight was over. The list now fits its
+  friends straight away, in combat too.
+
 ## 1.0.0
 
 - **One scroll bar in the Social window (O):** the Old Friends List group and the game's friends
