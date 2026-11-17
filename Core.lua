@@ -10,7 +10,7 @@ ns.ACCENT = "ffd100"         -- Blizzard gold
 ns.ICON = "Interface\\AddOns\\OldFriendsList\\Media\\Icon"
 ns.PORTRAIT = "Interface\\AddOns\\OldFriendsList\\Media\\Portrait"   -- the windows' portrait (inside Blizzard's ring)
 
-local DB_VERSION = 4
+local DB_VERSION = 5
 ns.BINDING = "OLDFRIENDSLIST_TOGGLE"   -- the key binding's name (Bindings.xml)
 ns.DEFAULT_KEY = "SHIFT-O"
 ns.SOCIAL_BINDING = "TOGGLESOCIAL"     -- Blizzard's Social window binding
@@ -30,7 +30,7 @@ local DEFAULTS = {
 	socialCollapsed = false, -- the Old Friends group in the Social window is collapsed
 	hideBNetDuplicates = false, -- Social window: hide Old Friends a Battle.net friend is playing right now
 	showBNet = false,        -- separate window: also list Battle.net friends playing this game
-	notifyBNet = true,       -- chat lines for Battle.net friends not on the list (see BattleNet.ShouldNotify)
+	notifyBNet = false,      -- chat lines for Battle.net friends not on the list (opt-in, in the options; see BattleNet.ShouldNotify)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
@@ -172,6 +172,12 @@ ns.On("ADDON_LOADED", function(name)
 		-- an existing install: the setup says clearly that nothing changes unless they choose it
 		db.settings.setupFromUpdate = true
 		db.version = 4
+	end
+	-- 1.0.2: Battle.net friends' login lines are off for everyone until turned on in the options
+	-- (test builds had them on)
+	if db.version < 5 then
+		db.settings.notifyBNet = false
+		db.version = 5
 	end
 	db.friends = db.friends or {}
 	db.settings = db.settings or {}

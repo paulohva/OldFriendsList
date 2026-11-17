@@ -51,9 +51,6 @@ local function Choose(mode)
 		local wantBNet = bnetCheck and bnetCheck:GetChecked() and true or false
 		local bnetChanged = wantBNet ~= (ns.db.settings.showBNet and true or false)
 		ns.db.settings.showBNet = wantBNet
-		-- Battle.net friends in this window: their logins and logouts are announced too
-		-- (the Social window choice leaves that option as it is: on by default)
-		if wantBNet then ns.db.settings.notifyBNet = true end
 		if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 		Options.SetMode("separate")
 		local wantSwap = swapCheck and swapCheck:GetChecked() and true or false

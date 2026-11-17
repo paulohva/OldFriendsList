@@ -301,3 +301,32 @@ ns.Listen("DB_READY", function()
 	end
 	for old in pairs(moved) do ns.db.friends[old] = nil end
 end)
+
+-- After a /reload or a quick relog, the list starts from what it showed a moment ago instead of
+-- "Checking..." for everyone. That matters most in dungeons and raids, where the game blocks
+-- the checks: without this, nobody had a status until you left. What counts is how long ago
+-- the session ended (a /reload: seconds), not when each friend was last checked (in a dungeon
+-- that can be long ago). The checks confirm or correct it as soon as they can.
+local RESTORE_MAX = 10 * 60   -- seconds
+Data.RESTORE_MAX = RESTORE_MAX
+
+-- the game saves the addon's data right after this (also on /reload)
+ns.On("PLAYER_LOGOUT", function()
+	if not ns.db then return end
+	for key, f in pairs(ns.db.friends) do
+		f.lastStatus = Data.status[key]
+		f.statusAt = nil   -- (1.0.2 test builds kept a time per friend)
+	end
+	ns.db.statusSavedAt = time()
+end)
+
+ns.Listen("DB_READY", function()
+	local savedAt = ns.db.statusSavedAt
+	local age = type(savedAt) == "number" and (time() - savedAt) or nil
+	if not age or age < 0 or age > RESTORE_MAX then return end
+	for key, f in pairs(ns.db.friends) do
+		if f.lastStatus == "online" or f.lastStatus == "offline" then
+			Data.status[key] = f.lastStatus   -- quietly: no "has come online" for it
+		end
+	end
+end)

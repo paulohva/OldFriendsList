@@ -107,12 +107,13 @@ if locale == "ptBR" then
 	L["Show a message in chat when a friend logs out."] = "Mostra um aviso no chat quando um amigo sai do jogo."
 	L["Play a sound when a friend comes online."] = "Toca um som quando um amigo fica online."
 	L["Show minimap button"] = "Mostrar botão no minimapa"
-	L["Show in the Social window"] = "Mostrar na janela de amigos"
-	L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when Old Friends List is already in that window."] =
-		"Acrescenta uma aba da Old Friends List abaixo das abas da janela de amigos do jogo (O). Não aparece quando a Old Friends List já está nessa janela."
+	L["Shortcut tab in the Blizzard Social window"] = "Aba de atalho na janela de amigos da Blizzard"
+	L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Only with the separate window: not shown when Old Friends List is already in that window."] =
+		"Acrescenta uma aba da Old Friends List abaixo das abas da janela de amigos do jogo (O). Só com a janela separada: não aparece quando a Old Friends List já está nessa janela."
 
 	-- Social window integration, key swap and first-time setup (0.3.0)
-	L["Social window"] = "Janela de amigos"
+	L["Blizzard Social window"] = "Janela de amigos da Blizzard"
+	L["Old Friends List window"] = "Janela da Old Friends List"
 	L["Old Friends List %d/%d"] = "Old Friends List %d/%d"
 	L["Couldn't add your friends to the Social window; using the separate window."] =
 		"Não foi possível adicionar seus amigos à janela de amigos; usando a janela separada."
@@ -145,12 +146,16 @@ if locale == "ptBR" then
 		"Agora o O abre a Old Friends List, e o Shift-O a janela de amigos."
 	L["O opens the Social window again, and Shift-O Old Friends List."] =
 		"O O voltou a abrir a janela de amigos, e o Shift-O a Old Friends List."
-	L["Show Old Friends List in the Social window (O)"] = "Mostrar a Old Friends List na janela de amigos (O)"
+	L["Where to see Old Friends List"] = "Onde ver a Old Friends List"
+	L["Window"] = "Janela"
+	L["Old Friends List inside the game's Social window (O), or in a window of its own (Shift-O)."] =
+		"A Old Friends List dentro da janela de amigos do jogo (O), ou numa janela própria (Shift-O)."
 	L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."] =
 		"A Old Friends List aparece junto com a lista de amigos do jogo. O Shift-O continua abrindo a janela separada."
 	L["Advanced"] = "Avançado"
 	L["First-time setup"] = "Configuração inicial"
 	L["Run the setup again"] = "Refazer a configuração"
+	L["Social window or separate window"] = "Janela de amigos ou janela separada"
 	L["Choose again: Old Friends List in the Social window or in a separate window."] =
 		"Escolha de novo: a Old Friends List na janela de amigos ou numa janela separada."
 	L["Old Friends List now appears in the Social window (O). Shift-O still opens the separate window."] =
