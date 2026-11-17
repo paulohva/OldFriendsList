@@ -8,11 +8,12 @@
 				<Texture parentKey="Background" atlas="friends-card-default" setAllPoints="true"/>
 			</Layer>
 			<Layer level="ARTWORK">
-				<!-- text starts where Blizzard's does: ~10 from the card's left edge, both lines aligned -->
+				<!-- text starts where Blizzard's does: ~10 from the card's left edge, both lines aligned;
+				     on the right it leaves room for the note icon and the invite button (UI/SocialList.lua) -->
 				<FontString parentKey="FriendName" inherits="GameFontNormalLarge" justifyH="LEFT" wordwrap="false">
 					<Anchors>
 						<Anchor point="TOPLEFT" x="10" y="-10"/>
-						<Anchor point="TOPRIGHT" x="-32" y="-10"/>
+						<Anchor point="TOPRIGHT" x="-64" y="-10"/>
 					</Anchors>
 				</FontString>
 				<FontString parentKey="Info" inherits="GameFontHighlight" justifyH="LEFT" wordwrap="false">
@@ -21,10 +22,11 @@
 						<Anchor point="TOPRIGHT" relativeKey="$parent.FriendName" relativePoint="BOTTOMRIGHT" y="-6"/>
 					</Anchors>
 				</FontString>
+				<!-- just left of the invite button (34 wide, 4 from the right edge), 6 apart -->
 				<Texture parentKey="NoteIcon" hidden="true" file="Interface\Buttons\UI-GuildButton-PublicNote-Up">
 					<Size x="14" y="14"/>
 					<Anchors>
-						<Anchor point="RIGHT" x="-12" y="0"/>
+						<Anchor point="RIGHT" x="-44" y="0"/>
 					</Anchors>
 				</Texture>
 			</Layer>

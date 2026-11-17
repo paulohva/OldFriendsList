@@ -126,8 +126,10 @@ end
 local function NextFriend(now)
 	local interval = ns.db.settings.pingInterval
 	local online, onlineAt, offline, offlineAt
+	local BattleNet = ns.BattleNet
 	for _, key in ipairs(Data.Visible()) do
-		if not pending[key] then
+		-- (a Battle.net friend on this character already says they're online: no ping needed)
+		if not pending[key] and not (BattleNet and BattleNet.Get(key)) then
 			local at = lastCheck[key]
 			if not at then return key end
 			if now - at >= interval then
@@ -246,6 +248,16 @@ local function RosterZone(key)
 			return zone
 		end
 	end
+end
+
+-- is this friend in your group (party or raid) right now? (from the group roster)
+function Presence.InGroup(key)
+	local n = Safe.Call(GetNumGroupMembers) or 0
+	for i = 1, n do
+		local name = Safe.CallAll(GetRaidRosterInfo, i)
+		if name and Data.Normalize(name) == key then return true end
+	end
+	return false
 end
 
 -- zone of a unit from the map it's on

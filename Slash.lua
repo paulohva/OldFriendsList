@@ -119,9 +119,17 @@ local function Diag()
 	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
 	print("  " .. ns.SocialList.Info())
 	print("  " .. ns.Guild.Info())
+	print("  " .. ns.BattleNet.Info())
 	print("  O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
 	local can, why = ns.Comm.CanSend()
 	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))
+	-- actions the game blocked and blamed on this addon, this session
+	local blocked = {}
+	for func, b in pairs(ns.blocked) do
+		blocked[#blocked + 1] = ("%s (%s, %dx, last %s)"):format(func, b.event, b.count, b.last)
+	end
+	table.sort(blocked)
+	print("  blocked actions this session: " .. (#blocked > 0 and ("|cffff4040" .. table.concat(blocked, "; ") .. "|r") or "|cff20ff20none|r"))
 end
 
 local function SetToggle(field, label, arg)
