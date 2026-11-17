@@ -255,7 +255,7 @@ end
 local function BNetNameText(entry)
 	local c = Data.ClassColor(entry.class)
 	local name = (c and c.WrapTextInColorCode) and c:WrapTextInColorCode(entry.key) or entry.key
-	local tag = type(entry.battleTag) == "string" and entry.battleTag:match("^[^#]+")
+	local tag = ns.BattleNet.ShortTag(entry)
 	return tag and (name .. "  " .. BNET_COLOR .. tag .. "|r") or name
 end
 

@@ -241,6 +241,8 @@ local function Build()
 	Try(AddCheckbox, "notifyOnline", L["Online messages"], L["Show a message in chat when a friend logs in."])
 	Try(AddCheckbox, "notifyOffline", L["Offline messages"], L["Show a message in chat when a friend logs out."])
 	Try(AddCheckbox, "sound", L["Login sound"], L["Play a sound when a friend comes online."])
+	Try(AddCheckbox, "notifyBNet", L["Battle.net friends"],
+		L["Also announce when Battle.net friends who aren't on your Old Friends List log in or out of WoW Forever. Only with Old Friends List in the Social window, or with Battle.net friends shown in the separate window."])
 
 	Try(AddHeader, layout, L["Key Binding"])
 	Try(AddKeybindingButton, layout)

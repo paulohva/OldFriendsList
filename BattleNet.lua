@@ -6,6 +6,8 @@
 --    again at once (a ping tells whether they're still on).
 --  * Options: hide those friends from the group in the Social window (hideBNetDuplicates), and
 --    list the other Battle.net friends in the separate window (showBNet).
+--  * 1.0.2: the other Battle.net friends (not on the list) logging in and out of this game get
+--    a chat line too (notifyBNet, see BattleNet.ShouldNotify); Old Friends keep their own line.
 -- Everything is read with ns.Safe (values the game keeps secret count as unknown).
 --------------------------------------------------------------------------------
 
@@ -90,12 +92,34 @@ local function Read()
 	return found
 end
 
+-- the first read after logging in (or after Battle.net comes back) only learns who's on: no
+-- "has come online" for everyone at once
+local primed
+
 local function Update()
+	-- Battle.net not connected: the list reads empty, which isn't everyone logging off
+	if Safe.Call(BNConnected) == false then
+		primed = false
+		return
+	end
 	local ok, found = pcall(Read)
 	if not ok then
 		ns.Debug("battle.net: %s", tostring(found))
 		return
 	end
+	-- Battle.net friends not on the list, logging in or out of this game (or switching
+	-- character: the old one goes, the new one comes). Old Friends get their own lines.
+	local Notify = ns.Notify
+	if primed and Notify then
+		-- (who left first: a character switch reads "old one offline, new one online")
+		for key, e in pairs(online) do
+			if not found[key] and not Data.Has(key) then Notify.BNetOffline(e) end
+		end
+		for key, e in pairs(found) do
+			if not online[key] and not Data.Has(key) then Notify.BNetOnline(e) end
+		end
+	end
+	primed = true
 	local Presence = ns.Presence
 	-- Old Friends seen through Battle.net: online now, with what their game says
 	for key, e in pairs(found) do
@@ -150,6 +174,19 @@ function BattleNet.Others()
 	end
 	table.sort(out, function(a, b) return a.key < b.key end)
 	return out
+end
+
+-- the BattleTag without its number ("Moletom#1851" -> "Moletom"), or nil
+function BattleNet.ShortTag(entry)
+	local tag = entry and entry.battleTag
+	return type(tag) == "string" and tag:match("^[^#]+") or nil
+end
+
+-- announce Battle.net friends (not on the list) logging in and out? Only where they're part of
+-- what you see: Old Friends List in the Social window, or Battle.net friends in the separate window
+function BattleNet.ShouldNotify()
+	local s = ns.db and ns.db.settings
+	return s and s.notifyBNet and (s.socialMode == "integrated" or s.showBNet) and true or false
 end
 
 -- on your faction (they can be whispered by name, invited and looked up with Who)?

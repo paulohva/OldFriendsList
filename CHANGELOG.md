@@ -4,6 +4,20 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.0.2
+
+- **Login and logout lines for Battle.net friends** who aren't on your Old Friends List, when
+  they log in or out of WoW Forever: the classic line with their character and, in Battle.net
+  blue, their BattleTag (e.g. "[Sr Coxinha] Andre has come online."). Characters on your Old
+  Friends List keep their usual line, never twice.
+- New option **Battle.net friends** under Notifications, on by default. It applies with Old
+  Friends List in the Social window, or with Battle.net friends shown in the separate window
+  (choosing the separate window with them in the first-time setup turns it on). The Online
+  messages, Offline messages and Login sound options apply to these lines too.
+- **First-time setup in combat:** the Choose buttons wait for the end of the fight, with a line
+  saying so (the game doesn't let key bindings change mid-fight, so a choice made then could
+  leave the O / Shift-O keys as they were).
+
 ## 1.0.1
 
 - **Fix:** opening the Social window (O) in combat, soon after logging in or a `/reload`, could

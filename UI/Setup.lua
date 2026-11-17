@@ -36,6 +36,7 @@ local function Done()
 end
 
 local function Choose(mode)
+	if Safe.InCombat() then return end   -- (the buttons are off in combat; just in case)
 	Done()
 	local Options = ns.Options
 	if mode == "integrated" then
@@ -50,6 +51,9 @@ local function Choose(mode)
 		local wantBNet = bnetCheck and bnetCheck:GetChecked() and true or false
 		local bnetChanged = wantBNet ~= (ns.db.settings.showBNet and true or false)
 		ns.db.settings.showBNet = wantBNet
+		-- Battle.net friends in this window: their logins and logouts are announced too
+		-- (the Social window choice leaves that option as it is: on by default)
+		if wantBNet then ns.db.settings.notifyBNet = true end
 		if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 		Options.SetMode("separate")
 		local wantSwap = swapCheck and swapCheck:GetChecked() and true or false
@@ -152,6 +156,14 @@ local function Build()
 	intro:SetText(L["New: Old Friends List can also appear in the game's Social window. Nothing changes unless you pick it."])
 	frame.Intro = intro
 
+	-- in combat the keys can't change: choosing waits for the end of the fight (same place as the intro)
+	local combatNote = frame:CreateFontString(nil, "ARTWORK", "GameFontRed")
+	combatNote:SetPoint("TOP", question, "BOTTOM", 0, -6)
+	combatNote:SetWidth(CARD_WIDTH * 2)
+	combatNote:SetText(L["You can choose after the fight."])
+	combatNote:Hide()
+	frame.CombatNote = combatNote
+
 	local integrated = MakeCard(frame, IMAGE_INTEGRATED, L["In the Social window (O)"],
 		L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."],
 		"integrated")
@@ -172,6 +184,17 @@ local function Build()
 	frame:Hide()
 end
 
+-- in combat: the Choose buttons are off (the keys can't change mid-fight) and a line says why
+local function UpdateCombatState()
+	if not frame then return end
+	local inCombat = Safe.InCombat()
+	for _, card in ipairs(cards) do card.Choose:SetEnabled(not inCombat) end
+	local s = ns.db.settings
+	local updating = s.setupFromUpdate and not s.setupDone
+	frame.CombatNote:SetShown(inCombat)
+	frame.Intro:SetShown((updating and not inCombat) and true or false)
+end
+
 function Setup.Show()
 	if not ns.db then return end
 	if not frame then Build() end
@@ -179,7 +202,6 @@ function Setup.Show()
 	local mode = s.socialMode == "integrated" and "integrated" or "separate"
 	-- someone updating from 0.2.x: their separate window is what they have, and stays unless they pick otherwise
 	local updating = s.setupFromUpdate and not s.setupDone
-	frame.Intro:SetShown(updating and true or false)
 	for _, card in ipairs(cards) do
 		local isCurrent = card.mode == mode and (s.setupDone or updating)
 		card.Current:SetShown(isCurrent and true or false)
@@ -189,8 +211,13 @@ function Setup.Show()
 	swapCheck:SetChecked(ns.Options.IsSwapped())
 	bnetCheck:SetChecked(s.showBNet and true or false)
 	duplicatesCheck:SetChecked(s.hideBNetDuplicates and true or false)
+	UpdateCombatState()
 	frame:Show()
 end
+
+-- the setup may be open when a fight starts or ends
+ns.On("PLAYER_REGEN_DISABLED", function() if frame and frame:IsShown() then UpdateCombatState() end end)
+ns.On("PLAYER_REGEN_ENABLED", function() if frame and frame:IsShown() then UpdateCombatState() end end)
 
 -- the first login with 0.3.0: a few seconds after the loading screen, never in combat
 local shownThisSession

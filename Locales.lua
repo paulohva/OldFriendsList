@@ -131,6 +131,10 @@ if locale == "ptBR" then
 	L["Battle.net friend: %s"] = "Amigo Battle.net: %s"
 	L["Other faction: double-click for a Battle.net whisper."] = "Outra facção: clique duas vezes para sussurrar pelo Battle.net."
 	L["Battle.net whisper"] = "Sussurrar pelo Battle.net"
+	L["You can choose after the fight."] = "Você pode escolher depois do combate."
+	L["Battle.net friends"] = "Amigos Battle.net"
+	L["Also announce when Battle.net friends who aren't on your Old Friends List log in or out of WoW Forever. Only with Old Friends List in the Social window, or with Battle.net friends shown in the separate window."] =
+		"Avisa também quando amigos Battle.net que não estão na sua Old Friends List entram ou saem do WoW Forever. Só com a Old Friends List na janela de amigos, ou com os amigos Battle.net na janela separada."
 	L["Add a character"] = "Adicionar personagem"
 	L["Add a character to Old Friends List"] = "Adicionar um personagem à Old Friends List"
 	L["Key bindings can't change in combat. Try again after the fight."] =

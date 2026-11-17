@@ -30,6 +30,7 @@ local DEFAULTS = {
 	socialCollapsed = false, -- the Old Friends group in the Social window is collapsed
 	hideBNetDuplicates = false, -- Social window: hide Old Friends a Battle.net friend is playing right now
 	showBNet = false,        -- separate window: also list Battle.net friends playing this game
+	notifyBNet = true,       -- chat lines for Battle.net friends not on the list (see BattleNet.ShouldNotify)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
