@@ -238,6 +238,7 @@ local function LayoutTwoScrolls()
 	if header.SetText then header:SetText(text) end
 	if header.ButtonText then header.ButtonText:SetText(text) end
 	SetCollapseIcon(collapsed)
+	UI.UpdateStale(header.Stale)
 
 	local rows = collapsed and 0 or math.min(#keys, MAX_ROWS)
 	local scrolls = rows > 0 and #keys > MAX_ROWS
@@ -402,6 +403,7 @@ local function LayoutSingleScroll()
 		if header.SetText then header:SetText(text) end
 		if header.ButtonText then header.ButtonText:SetText(text) end
 		SetCollapseIcon(collapsed)
+		UI.UpdateStale(header.Stale)
 		LayoutRows(keys, collapsed)
 		section:SetHeight(sectionHeight)
 		section:Show()
@@ -479,6 +481,9 @@ local function BuildHeader()
 	end)
 	add:SetScript("OnClick", function() ns.Actions.AddPrompt() end)
 	h.AddButton = add
+	-- statuses may be out of date (in a dungeon...): the separate window's clock, left of the "+"
+	h.Stale = UI.CreateStaleIcon(h, 16)
+	h.Stale:SetPoint("RIGHT", add, "LEFT", -6, 0)
 	h:SetScript("OnClick", function()
 		ns.db.settings.socialCollapsed = not ns.db.settings.socialCollapsed
 		if PlaySound and SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
@@ -627,6 +632,8 @@ ns.Listen("STATUS_CHANGED", OnDataChanged)
 ns.Listen("FRIENDS_CHANGED", OnDataChanged)
 -- Battle.net friends came, went or changed character (the "hide duplicates" option)
 ns.Listen("BNET_CHANGED", OnDataChanged)
+-- checks paused or back (a dungeon...): the clock on the header
+ns.Listen("PAUSE_CHANGED", OnDataChanged)
 -- the invite buttons depend on your group (who's in it, who leads it)
 ns.On("GROUP_ROSTER_UPDATE", OnDataChanged)
 ns.On("PARTY_LEADER_CHANGED", OnDataChanged)

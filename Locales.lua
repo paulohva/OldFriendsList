@@ -133,6 +133,13 @@ if locale == "ptBR" then
 	L["Other faction: double-click for a Battle.net whisper."] = "Outra facção: clique duas vezes para sussurrar pelo Battle.net."
 	L["Other region"] = "Outra região"
 	L["%s plays in another region: only a Battle.net whisper reaches them."] = "%s joga em outra região: só um sussurro pelo Battle.net chega até lá."
+	L["%s is on a %s realm: only a Battle.net whisper reaches them."] = "%s está em um reino %s: só um sussurro pelo Battle.net chega até lá."
+	L["%s realm: double-click for a Battle.net whisper."] = "Reino %s: clique duas vezes para sussurrar pelo Battle.net."
+	L["Add %s to Old Friends List"] = "Adicionar %s à Old Friends List"
+	L["Remove %s from Old Friends List"] = "Remover %s da Old Friends List"
+	L["Statuses may be out of date"] = "O status pode estar desatualizado"
+	L["The game doesn't let the addon check your friends right now (%s). They're checked again as soon as it does."] =
+		"O jogo não deixa o addon verificar seus amigos agora (%s). Eles são verificados de novo assim que der."
 	L["Other region: double-click for a Battle.net whisper."] = "Outra região: clique duas vezes para sussurrar pelo Battle.net."
 	L["Battle.net whisper"] = "Sussurrar pelo Battle.net"
 	L["You can choose after the fight."] = "Você pode escolher depois do combate."

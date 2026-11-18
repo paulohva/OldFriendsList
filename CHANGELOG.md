@@ -4,6 +4,23 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.0.3
+
+- **Realm types:** characters on another realm type (PvP, PvE, RP, RP-PvP) can't be whispered
+  by name or invited, so Old Friends List now treats them like the other faction. Battle.net
+  friends playing there show in the separate window with the realm type next to them (e.g.
+  "(PvE)"), for a Battle.net whisper only, and they can't be added to your Old Friends List.
+- Your Old Friends List shows the friends of your character's realm type (and faction), so each
+  character sees the friends it can play with. Friends added before this version show
+  everywhere until the addon learns their realm type (through Battle.net or a target).
+- **Add a Battle.net friend's character from the Social window:** right-click a Battle.net
+  friend (in Favorites or the list) for **Add [character] to Old Friends List**, when they're
+  playing a character you can group with. Already on your list: **Remove** instead.
+- **Statuses may be out of date:** in a dungeon, raid or battleground the game doesn't let the
+  addon check anyone. A small clock now shows it, next to the online count in the separate
+  window and on the Old Friends List group in the Social window (its tooltip says why).
+- The first-time setup's picture of the Social window shows its current look.
+
 ## 1.0.2
 
 - **Login and logout lines for Battle.net friends** who aren't on your Old Friends List, when

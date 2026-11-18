@@ -33,6 +33,7 @@ It works with any character, whether or not they use the addon.
   once. Optionally, the separate window also lists your Battle.net friends who are playing, and
   the Social window can skip characters the game already shows on a Battle.net card. Battle.net
   friends who aren't on your list get login and logout lines too, with their BattleTag.
+  Right-click a Battle.net friend in the Social window to add the character they're playing.
 - **Minimap button.** Hover it to see who's online; click to open the list, right-click for the
   options or to hide the button. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
@@ -91,11 +92,11 @@ remembered.
 
 ### Limitations
 
-- **Same faction.** You can only reach characters of your own faction, the same limit as whispers
-  and invites. Your list is shared across your account, and each character only sees the friends
-  of its own faction.
+- **Same faction and realm type.** You can only reach characters of your own faction and realm
+  type (PvP, PvE, RP, RP-PvP), the same limit as whispers and invites. Your list is shared
+  across your account, and each character only sees the friends of its own faction and realm type.
 - **Paused in combat and instances.** Checks pause there, because the game blocks addon messages.
-  Statuses shown meanwhile are the last ones known.
+  Statuses shown meanwhile are the last ones known, with a small clock to say so.
 - **A short delay.** A friend who doesn't use the addon shows as online within about a minute of
   logging in, depending on how many friends you have and the check interval.
 

@@ -22,6 +22,51 @@ local selectedBNet    -- the Battle.net friend's entry, when the selected row is
 local BNET_COLOR = "|cff82c5ff"   -- Battle.net names, as the game colours them
 
 --------------------------------------------------------------------------------
+-- "Statuses may be out of date" (1.0.3): a small clock next to the online count, here and on
+-- the group header in the Social window, while the game doesn't let the addon check anyone
+-- (in a dungeon, raid, battleground...). Not in combat: that pause lasts seconds.
+--------------------------------------------------------------------------------
+
+local STALE_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
+
+-- why statuses may be out of date right now (a reason Presence gives), or nil
+function UI.StaleReason()
+	local reason = Presence.PausedReason()
+	if reason == "in combat" then
+		-- (a fight in a dungeon is still a dungeon: keep the clock)
+		return Safe.InInstance() and "in an instance" or nil
+	end
+	return reason
+end
+
+-- the clock, with its tooltip; shown and hidden by UI.UpdateStale
+function UI.CreateStaleIcon(parent, size)
+	local b = CreateFrame("Frame", nil, parent)
+	b:SetSize(size or 14, size or 14)
+	local icon = b:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints()
+	icon:SetTexture(STALE_ICON)
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)   -- (without the icon's border)
+	b:SetAlpha(0.8)
+	b:EnableMouse(true)
+	b:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(L["Statuses may be out of date"])
+		local reason = UI.StaleReason()
+		GameTooltip:AddLine(L["The game doesn't let the addon check your friends right now (%s). They're checked again as soon as it does."]
+			:format(reason and L[reason] or "?"), 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	b:Hide()
+	return b
+end
+
+function UI.UpdateStale(icon)
+	if icon then icon:SetShown(UI.StaleReason() ~= nil) end
+end
+
+--------------------------------------------------------------------------------
 -- Actions (also used by the slash commands)
 --------------------------------------------------------------------------------
 
@@ -247,15 +292,17 @@ local function FactionName(faction)
 	return tostring(faction)
 end
 
--- whisper by name, invite, Who, add: not on the other faction nor in another region
+-- whisper by name, invite, Who, add: not on the other faction, another realm type nor in another region
 local function Reachable(entry)
 	return ns.BattleNet.Reachable(entry)
 end
 
--- why only a Battle.net whisper reaches them: "Other region" / the other faction's name, or nil
+-- why only a Battle.net whisper reaches them: "Other region" / the other faction's name /
+-- the realm type ("PvE"), or nil
 local function FarReason(entry)
 	if entry.otherRegion then return L["Other region"] end
 	if not ns.BattleNet.SameFaction(entry) then return FactionName(entry.faction) end
+	if not Data.SameRealmType(entry.realmType) then return Data.RealmTypeName(entry.realmType) end
 	return nil
 end
 
@@ -291,8 +338,10 @@ local function ShowBNetTooltip(row)
 	local hint = L["Double-click to whisper, right-click for options."]
 	if entry.otherRegion then
 		hint = L["Other region: double-click for a Battle.net whisper."]
-	elseif far then
+	elseif not ns.BattleNet.SameFaction(entry) then
 		hint = L["Other faction: double-click for a Battle.net whisper."]
+	elseif far then
+		hint = L["%s realm: double-click for a Battle.net whisper."]:format(far)
 	end
 	GameTooltip:AddLine(hint, 0.5, 0.5, 0.5, true)
 	GameTooltip:Show()
@@ -428,10 +477,10 @@ function UI.Refresh()
 	end
 
 	local online, total = Data.CountOnline()
-	local text = L["Online: |cffffffff%d|r / %d"]:format(online, total)
-	local paused = Presence.PausedReason()
-	if paused then text = text .. GREY .. "  (" .. L["checks paused: %s"]:format(L[paused]) .. ")|r" end
-	onlineText:SetText(text)
+	onlineText:SetText(L["Online: |cffffffff%d|r / %d"]:format(online, total))
+	frame.Stale:ClearAllPoints()
+	frame.Stale:SetPoint("LEFT", onlineText, "LEFT", onlineText:GetStringWidth() + 6, 0)
+	UI.UpdateStale(frame.Stale)
 	emptyText:SetShown(total == 0 and bnetCount == 0)
 	UpdateButtons()
 end
@@ -517,6 +566,10 @@ local function Build()
 	onlineText:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -36)
 	onlineText:SetPoint("TOPRIGHT", gear, "TOPLEFT", -6, -1)
 	onlineText:SetJustifyH("LEFT")
+	onlineText:SetWordWrap(false)
+	-- the clock goes right after the count ("Online: 3 / 7 ⏱")
+	frame.Stale = UI.CreateStaleIcon(frame, 14)
+	frame.Stale:SetPoint("LEFT", onlineText, "LEFT", 0, 0)
 
 	local inset = frame.Inset or frame
 	scrollBox = CreateFrame("Frame", nil, inset, "WowScrollBoxList")

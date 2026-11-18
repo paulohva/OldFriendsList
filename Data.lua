@@ -59,6 +59,43 @@ function Data.MyKey()
 	return Data.Normalize(Safe.Call(UnitName, "player"))
 end
 
+--------------------------------------------------------------------------------
+-- Realm types (1.0.3). On Forever, realms of the same type (PvP, PvE, RP, RP-PvP) are one
+-- world: characters on them can whisper and group with each other whatever the realm number.
+-- Across types they can't (only a Battle.net whisper). The game gives no realm type, but it's
+-- always the end of the realm's name: "CAMWOW US1 Realm 4 PvP", "CAMWOWUS2Realm7PvE".
+--------------------------------------------------------------------------------
+
+local REALM_TYPES = { "RPPVP", "PVP", "PVE", "RP" }   -- (RP-PvP first: it also ends in "PvP")
+local REALM_TYPE_NAMES = { RPPVP = "RP-PvP", PVP = "PvP", PVE = "PvE", RP = "RP" }
+
+-- "PVP" / "PVE" / "RP" / "RPPVP" from a realm name, or nil when it doesn't say
+function Data.RealmType(realm)
+	if type(realm) ~= "string" then return nil end
+	local s = realm:gsub("[%s%-_]", ""):upper()
+	for _, t in ipairs(REALM_TYPES) do
+		if #s > #t and s:sub(-#t) == t then return t end
+	end
+	return nil
+end
+
+-- "PvE" for showing
+function Data.RealmTypeName(t)
+	return REALM_TYPE_NAMES[t] or t
+end
+
+local myRealmType
+function Data.MyRealmType()
+	myRealmType = myRealmType or Data.RealmType(Safe.Call(GetRealmName))
+	return myRealmType
+end
+
+-- can a character on this realm type group with you? (unknown on either side: yes)
+function Data.SameRealmType(t)
+	local mine = Data.MyRealmType()
+	return not (t and mine) or t == mine
+end
+
 -- "asha brightvale", "Asha  Brightvale-SomeRealm" -> "Asha Brightvale"; nil if not a name.
 -- (a "-Realm" the game may add is dropped: names are unique across the region)
 function Data.Normalize(input)
@@ -95,7 +132,7 @@ function Data.Has(key)
 	return key ~= nil and ns.db.friends[key] ~= nil
 end
 
--- add a friend; info may carry class, level, faction from a unit. Returns key or nil, error
+-- add a friend; info may carry class, level, faction, realmType from a unit. Returns key or nil, error
 function Data.Add(input, info)
 	local key = Data.Normalize(input)
 	if not key or not key:find(" ") then
@@ -103,15 +140,15 @@ function Data.Add(input, info)
 	end
 	if key == Data.MyKey() then return nil, ns.L["You can't add yourself."] end
 	if Data.Has(key) then return nil, ns.L["%s is already on your list."]:format(Data.Display(key)) end
-	-- a Battle.net friend's character tells their faction even without a unit (a name typed or
-	-- clicked in chat); one in another region can only be reached through Battle.net
+	-- a Battle.net friend's character tells their faction and realm type even without a unit
+	-- (a name typed or clicked in chat); one in another region can only be reached through Battle.net
 	local BattleNet = ns.BattleNet
 	if BattleNet then
 		local here = BattleNet.Get(key)
 		if here then
 			local given = info or {}
 			info = { class = given.class or here.class, level = given.level or here.level,
-				faction = given.faction or here.faction }
+				faction = given.faction or here.faction, realmType = given.realmType or here.realmType }
 		elseif BattleNet.Shown(key) then
 			return nil, ns.L["%s plays in another region: only a Battle.net whisper reaches them."]:format(Data.Display(key))
 		end
@@ -120,10 +157,15 @@ function Data.Add(input, info)
 	if info and info.faction and myFaction and info.faction ~= myFaction then
 		return nil, ns.L["%s is on the other faction: you can't whisper or invite them."]:format(Data.Display(key))
 	end
+	if info and not Data.SameRealmType(info.realmType) then
+		return nil, ns.L["%s is on a %s realm: only a Battle.net whisper reaches them."]:format(Data.Display(key),
+			Data.RealmTypeName(info.realmType))
+	end
 	ns.db.friends[key] = {
 		class = info and info.class,
 		level = info and info.level,
 		faction = (info and info.faction) or myFaction,
+		realmType = (info and info.realmType) or Data.MyRealmType(),
 		note = nil,
 		addedAt = time(),
 		lastSeen = nil,
@@ -149,11 +191,13 @@ function Data.SetNote(key, note)
 	ns.Fire("FRIENDS_CHANGED", key, "note")
 end
 
--- updates class/level/zone from whatever source (unit, handshake, /who)
-function Data.UpdateInfo(key, class, level, zone)
+-- updates class/level/zone (and realm type, when known) from whatever source (unit, handshake,
+-- /who, Battle.net)
+function Data.UpdateInfo(key, class, level, zone, realmType)
 	local f = Data.Get(key)
 	if not f then return end
 	local changed = false
+	if type(realmType) == "string" and f.realmType ~= realmType then f.realmType, changed = realmType, true end
 	if type(class) == "string" and class ~= "" and f.class ~= class then f.class, changed = class, true end
 	level = tonumber(level)
 	if level and level > 0 and f.level ~= level then f.level, changed = level, true end
@@ -162,12 +206,13 @@ function Data.UpdateInfo(key, class, level, zone)
 	if changed then ns.Fire("FRIENDS_CHANGED", key, "info") end
 end
 
--- friends that belong to this character's realm group and faction
+-- friends this character can reach: same faction and same realm type (when known). The others
+-- stay saved, and show up on a character of their faction and realm type.
 function Data.Visible()
 	local out = {}
 	local myFaction = Data.MyFaction()
 	for key, f in pairs(ns.db.friends) do
-		if not f.faction or not myFaction or f.faction == myFaction then
+		if (not f.faction or not myFaction or f.faction == myFaction) and Data.SameRealmType(f.realmType) then
 			out[#out + 1] = key
 		end
 	end
@@ -265,10 +310,13 @@ end
 function Data.InfoFromUnit(unit)
 	if not Safe.Call(UnitIsPlayer, unit) then return nil end
 	local _, class = Safe.CallAll(UnitClass, unit)
+	-- (no realm: the unit is on your own realm)
+	local _, realm = Safe.CallAll(UnitFullName, unit)
 	return {
 		class = class,
 		level = Safe.Call(UnitLevel, unit),
 		faction = Safe.Call(UnitFactionGroup, unit),
+		realmType = (type(realm) == "string" and realm ~= "") and Data.RealmType(realm) or Data.MyRealmType(),
 	}
 end
 
