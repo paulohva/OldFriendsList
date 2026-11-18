@@ -103,6 +103,19 @@ function Data.Add(input, info)
 	end
 	if key == Data.MyKey() then return nil, ns.L["You can't add yourself."] end
 	if Data.Has(key) then return nil, ns.L["%s is already on your list."]:format(Data.Display(key)) end
+	-- a Battle.net friend's character tells their faction even without a unit (a name typed or
+	-- clicked in chat); one in another region can only be reached through Battle.net
+	local BattleNet = ns.BattleNet
+	if BattleNet then
+		local here = BattleNet.Get(key)
+		if here then
+			local given = info or {}
+			info = { class = given.class or here.class, level = given.level or here.level,
+				faction = given.faction or here.faction }
+		elseif BattleNet.Shown(key) then
+			return nil, ns.L["%s plays in another region: only a Battle.net whisper reaches them."]:format(Data.Display(key))
+		end
+	end
 	local myFaction = Data.MyFaction()
 	if info and info.faction and myFaction and info.faction ~= myFaction then
 		return nil, ns.L["%s is on the other faction: you can't whisper or invite them."]:format(Data.Display(key))

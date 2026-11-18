@@ -247,8 +247,16 @@ local function FactionName(faction)
 	return tostring(faction)
 end
 
-local function SameFaction(entry)
-	return ns.BattleNet.SameFaction(entry)
+-- whisper by name, invite, Who, add: not on the other faction nor in another region
+local function Reachable(entry)
+	return ns.BattleNet.Reachable(entry)
+end
+
+-- why only a Battle.net whisper reaches them: "Other region" / the other faction's name, or nil
+local function FarReason(entry)
+	if entry.otherRegion then return L["Other region"] end
+	if not ns.BattleNet.SameFaction(entry) then return FactionName(entry.faction) end
+	return nil
 end
 
 -- the character, then the BattleTag without its number in Battle.net blue ("Moletom#1851" -> "Moletom")
@@ -262,7 +270,8 @@ end
 local function BNetInfoLine(entry)
 	local who = Data.LevelClass(entry)
 	local line = (who and entry.zone) and (who .. " - " .. entry.zone) or who or entry.zone or L["Online"]
-	if not SameFaction(entry) then line = line .. " (" .. FactionName(entry.faction) .. ")" end
+	local far = FarReason(entry)
+	if far then line = line .. " (" .. far .. ")" end
 	return line
 end
 
@@ -275,11 +284,17 @@ local function ShowBNetTooltip(row)
 	local who = Data.LevelClass(entry)
 	if who then GameTooltip:AddLine(who, 1, 1, 1) end
 	if entry.zone then GameTooltip:AddLine(entry.zone, 1, 1, 1) end
-	if not SameFaction(entry) then GameTooltip:AddLine(FactionName(entry.faction), 1, 0.3, 0.3) end
+	local far = FarReason(entry)
+	if far then GameTooltip:AddLine(far, 1, 0.3, 0.3) end
 	if entry.battleTag then GameTooltip:AddLine(L["Battle.net friend: %s"]:format(entry.battleTag), 0.51, 0.77, 1) end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine(SameFaction(entry) and L["Double-click to whisper, right-click for options."]
-		or L["Other faction: double-click for a Battle.net whisper."], 0.5, 0.5, 0.5, true)
+	local hint = L["Double-click to whisper, right-click for options."]
+	if entry.otherRegion then
+		hint = L["Other region: double-click for a Battle.net whisper."]
+	elseif far then
+		hint = L["Other faction: double-click for a Battle.net whisper."]
+	end
+	GameTooltip:AddLine(hint, 0.5, 0.5, 0.5, true)
 	GameTooltip:Show()
 end
 
@@ -288,7 +303,7 @@ local function OpenBNetMenu(row)
 	if not (entry and MenuUtil and MenuUtil.CreateContextMenu) then return end
 	MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(entry.key)
-		if SameFaction(entry) then
+		if Reachable(entry) then
 			root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(entry.key) end)
 			root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(entry.key) end)
 			root:CreateButton(G("WHO", "Who"), function() Actions.Who(entry.key) end)
@@ -302,9 +317,9 @@ local function OpenBNetMenu(row)
 	end)
 end
 
--- whisper the selected row: by name, or through Battle.net for the other faction
+-- whisper the selected row: by name, or through Battle.net for the other faction / region
 local function WhisperSelected()
-	if selectedBNet and not SameFaction(selectedBNet) then
+	if selectedBNet and not Reachable(selectedBNet) then
 		Actions.WhisperBNet(selectedBNet)
 	elseif selectedKey then
 		Actions.Whisper(selectedKey)
@@ -315,7 +330,7 @@ local function UpdateButtons()
 	if not frame then return end
 	if selectedBNet then
 		whisperButton:SetEnabled(true)
-		inviteButton:SetEnabled(SameFaction(selectedBNet) and Actions.CanInvite(selectedKey, true) and true or false)
+		inviteButton:SetEnabled(Reachable(selectedBNet) and Actions.CanInvite(selectedKey, true) and true or false)
 		removeButton:SetEnabled(false)
 		return
 	end
@@ -346,7 +361,7 @@ local function InitRow(row, elementData)
 			end
 		end)
 		row:SetScript("OnDoubleClick", function(self)
-			if self.bnet and not SameFaction(self.bnet) then Actions.WhisperBNet(self.bnet) else Actions.Whisper(self.key) end
+			if self.bnet and not Reachable(self.bnet) then Actions.WhisperBNet(self.bnet) else Actions.Whisper(self.key) end
 		end)
 		row:SetScript("OnEnter", function(self)
 			if self.bnet then ShowBNetTooltip(self) else ShowTooltip(self) end
@@ -406,7 +421,7 @@ function UI.Refresh()
 	scrollBox:SetDataProvider(dataProvider, ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
 	-- the selection is gone from the list (or the Battle.net friend left, or was added to it)
 	if selectedBNet then
-		local entry = ns.db.settings.showBNet and ns.BattleNet.Get(selectedKey)
+		local entry = ns.db.settings.showBNet and ns.BattleNet.Shown(selectedKey)
 		if entry and not Data.Has(selectedKey) then selectedBNet = entry else selectedKey, selectedBNet = nil, nil end
 	elseif selectedKey and not Data.Has(selectedKey) then
 		selectedKey = nil

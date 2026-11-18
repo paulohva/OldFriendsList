@@ -15,6 +15,12 @@ All notable changes to Old Friends List are listed here.
   separate window. The Online messages, Offline messages and Login sound options apply to these
   lines too. The game's own Battle.net alert names only the account (and not on a character
   switch), which is why these lines name the character.
+- **Battle.net friends playing in another region** now show in the separate window too (with
+  "Other region" next to them) and get the login and logout lines. As with the other faction,
+  only a Battle.net whisper reaches them: no invite, Who or adding them to your Old Friends List.
+- **Battle.net friends on the other faction or in another region can't be added** to your Old
+  Friends List by name either (typed, or right-clicking their name in chat): they stay
+  Battle.net-only.
 - **After a `/reload` or a quick relog**, friends keep the status they had a moment ago (up to
   10 minutes) instead of showing "Checking..." until checked again. That matters most in
   dungeons and raids, where the game doesn't let the addon check anyone.

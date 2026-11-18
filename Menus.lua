@@ -37,6 +37,13 @@ local function Modify(_, root, contextData)
 	if not key or key == Data.MyKey() then return end
 	local myFaction = Data.MyFaction()
 	if info and info.faction and myFaction and info.faction ~= myFaction then return end
+	-- a name in chat (no unit): a Battle.net friend on the other faction or in another region
+	-- is for Battle.net only, so no "Add" for them
+	local BattleNet = ns.BattleNet
+	if not info and not Data.Has(key) and BattleNet then
+		local entry = BattleNet.Shown(key)
+		if entry and not BattleNet.Reachable(entry) then return end
+	end
 
 	root:CreateDivider()
 	if Data.Has(key) then

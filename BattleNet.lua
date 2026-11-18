@@ -8,6 +8,8 @@
 --    list the other Battle.net friends in the separate window (showBNet).
 --  * 1.0.2: the other Battle.net friends (not on the list) logging in and out of this game get
 --    a chat line too (notifyBNet, see BattleNet.ShouldNotify); Old Friends keep their own line.
+--    Friends playing in another region are shown too, with a chat line, but only a Battle.net
+--    whisper reaches them (no invite, Who or adding them: names repeat across regions).
 -- Everything is read with ns.Safe (values the game keeps secret count as unknown).
 --------------------------------------------------------------------------------
 
@@ -18,6 +20,7 @@ local BattleNet = {}
 ns.BattleNet = BattleNet
 
 local online = {}     -- key -> entry: characters of Battle.net friends online in this game now
+local elsewhere = {}  -- the same, in another region (never Old Friends: names repeat across regions)
 local UPDATE_DELAY = 0.5
 
 -- class file ("WARRIOR") from the class name the friend's game reports (in the game's language)
@@ -39,15 +42,16 @@ local function ClassFile(className, guid)
 	return file
 end
 
--- a game account that is online in this game (WoW Forever), in this region
+-- a game account that is online in this game (WoW Forever): "here" in this region, "elsewhere"
+-- in another one (a different set of realms: only a Battle.net whisper reaches them), or nil
 local function InThisGame(game)
-	if Safe.Value(game.isOnline) ~= true then return false end
+	if Safe.Value(game.isOnline) ~= true then return nil end
 	local client = Safe.Value(game.clientProgram)
-	if client ~= (BNET_CLIENT_WOW or "WoW") then return false end
+	if client ~= (BNET_CLIENT_WOW or "WoW") then return nil end
 	local project = Safe.Value(game.wowProjectID)
-	if WOW_PROJECT_ID and project and project ~= WOW_PROJECT_ID then return false end
-	if Safe.Value(game.isInCurrentRegion) == false then return false end
-	return true
+	if WOW_PROJECT_ID and project and project ~= WOW_PROJECT_ID then return nil end
+	if Safe.Value(game.isInCurrentRegion) == false then return "elsewhere" end
+	return "here"
 end
 
 local function Entry(account, game)
@@ -67,18 +71,27 @@ local function Entry(account, game)
 	}
 end
 
--- every Battle.net friend's character online in this game, by key
+-- every Battle.net friend's character online in this game, by key: in this region, and in
+-- another region (shown in the separate window only to chat with them)
 local function Read()
-	local found = {}
-	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo) then return found end
+	local found, far = {}, {}
+	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo) then return found, far end
 	local n = Safe.Call(BNGetNumFriends) or 0
 	for i = 1, n do
 		local account = Safe.Call(C_BattleNet.GetFriendAccountInfo, i)
 		if type(account) == "table" then
 			local function Consider(game)
-				if type(game) ~= "table" or not InThisGame(game) then return end
+				if type(game) ~= "table" then return end
+				local where = InThisGame(game)
+				if not where then return end
 				local entry = Entry(account, game)
-				if entry then found[entry.key] = entry end
+				if not entry then return end
+				if where == "here" then
+					found[entry.key] = entry
+				else
+					entry.otherRegion = true
+					far[entry.key] = entry
+				end
 			end
 			-- a friend can be on several games at once: look at each of them
 			local games = Safe.Call(C_BattleNet.GetFriendNumGameAccounts, i) or 0
@@ -89,7 +102,7 @@ local function Read()
 			end
 		end
 	end
-	return found
+	return found, far
 end
 
 -- the first read after logging in (or after Battle.net comes back) only learns who's on: no
@@ -102,24 +115,33 @@ local function Update()
 		primed = false
 		return
 	end
-	local ok, found = pcall(Read)
+	local ok, found, far = pcall(Read)
 	if not ok then
 		ns.Debug("battle.net: %s", tostring(found))
 		return
 	end
+	far = far or {}
 	-- Battle.net friends not on the list, logging in or out of this game (or switching
-	-- character: the old one goes, the new one comes). Old Friends get their own lines.
+	-- character: the old one goes, the new one comes), in this region or another one.
+	-- Old Friends get their own lines.
 	local Notify = ns.Notify
 	if primed and Notify then
 		-- (who left first: a character switch reads "old one offline, new one online")
 		for key, e in pairs(online) do
 			if not found[key] and not Data.Has(key) then Notify.BNetOffline(e) end
 		end
+		for key, e in pairs(elsewhere) do
+			if not far[key] then Notify.BNetOffline(e) end
+		end
 		for key, e in pairs(found) do
 			if not online[key] and not Data.Has(key) then Notify.BNetOnline(e) end
 		end
+		for key, e in pairs(far) do
+			if not elsewhere[key] then Notify.BNetOnline(e) end
+		end
 	end
 	primed = true
+	elsewhere = far
 	local Presence = ns.Presence
 	-- Old Friends seen through Battle.net: online now, with what their game says
 	for key, e in pairs(found) do
@@ -166,11 +188,21 @@ function BattleNet.Get(key)
 	return key and online[key]
 end
 
--- Battle.net friends' characters online in this game, not on the Old Friends List, by name
+-- a Battle.net friend's character shown in the separate window (this region or another), or nil
+function BattleNet.Shown(key)
+	return key and (online[key] or elsewhere[key])
+end
+
+-- Battle.net friends' characters online in this game, not on the Old Friends List, by name;
+-- also the ones in another region
 function BattleNet.Others()
 	local out = {}
 	for key, e in pairs(online) do
 		if not Data.Has(key) then out[#out + 1] = e end
+	end
+	for key, e in pairs(elsewhere) do
+		-- (the same name here wins: one row per name)
+		if not online[key] and not Data.Has(key) then out[#out + 1] = e end
 	end
 	table.sort(out, function(a, b) return a.key < b.key end)
 	return out
@@ -195,6 +227,12 @@ function BattleNet.SameFaction(e)
 	return not (e and e.faction and mine) or e.faction == mine
 end
 
+-- can you whisper them by name, invite them, look them up with Who, add them to the list?
+-- Not on the other faction nor in another region: there, only a Battle.net whisper
+function BattleNet.Reachable(e)
+	return not (e and e.otherRegion) and BattleNet.SameFaction(e)
+end
+
 -- for /ofl diag
 function BattleNet.Info()
 	local count, onList = 0, 0
@@ -202,8 +240,10 @@ function BattleNet.Info()
 		count = count + 1
 		if Data.Has(key) then onList = onList + 1 end
 	end
-	return ("Battle.net: %d friends online in this game (%d on your list), project %s"):format(count, onList,
-		tostring(WOW_PROJECT_ID))
+	local far = 0
+	for _ in pairs(elsewhere) do far = far + 1 end
+	return ("Battle.net: %d friends online in this game (%d on your list, %d more in another region), project %s")
+		:format(count, onList, far, tostring(WOW_PROJECT_ID))
 end
 
 BattleNet.Update, BattleNet.Read = Update, Read   -- (for tests)
