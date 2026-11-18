@@ -81,6 +81,61 @@ function Notify.Offline(key)
 	SystemLine((blizzard or ns.L["%s has gone offline."]):format(PlayerLink(key)))
 end
 
+--------------------------------------------------------------------------------
+-- Battle.net friends not on the list (1.0.2): the same lines, with the BattleTag (without its
+-- number) in Battle.net blue right after [Character]. Only when BattleNet.ShouldNotify() says
+-- they're part of what you see; Old Friends never get these (they have their own line).
+--------------------------------------------------------------------------------
+
+local BNET_COLOR = "|cff82c5ff"
+
+-- [Character] clickable, in class colour when that option is on
+local function BNetLink(entry)
+	local c = Data.ClassColor(entry.class)
+	local text = entry.key
+	if c and c.WrapTextInColorCode then text = c:WrapTextInColorCode(text) end
+	return ("|Hplayer:%s|h[%s]|h"):format(entry.key, text)
+end
+
+local function BNetTag(entry)
+	local tag = ns.BattleNet.ShortTag(entry)
+	return tag and (BNET_COLOR .. tag .. "|r") or nil
+end
+
+local function BNetAllowed(entry, setting)
+	if not (entry and ns.BattleNet.ShouldNotify() and ns.db.settings[setting]) then return false end
+	if ns.Guild.Announces(entry.key) then
+		ns.Debug("%s: left to the guild alert", entry.key)
+		return false
+	end
+	return true
+end
+
+function Notify.BNetOnline(entry)
+	if not BNetAllowed(entry, "notifyOnline") then return end
+	local tag = BNetTag(entry)
+	local line
+	local blizzard = Blizzard("ERR_FRIEND_ONLINE_SS", 2)
+	if blizzard then
+		local c = Data.ClassColor(entry.class)
+		local display = (c and c.WrapTextInColorCode) and c:WrapTextInColorCode(entry.key) or entry.key
+		line = blizzard:format(entry.key, display)
+		-- the tag goes right after the game's [Character] link, whatever the language
+		if tag then line = line:gsub("(|h%[.-%]|h)", function(link) return link .. " " .. tag end, 1) end
+	else
+		line = ns.L["%s has come online."]:format(BNetLink(entry) .. (tag and (" " .. tag) or ""))
+	end
+	SystemLine(line)
+	PlayOnlineSound()
+end
+
+function Notify.BNetOffline(entry)
+	if not BNetAllowed(entry, "notifyOffline") then return end
+	local tag = BNetTag(entry)
+	local blizzard = Blizzard("ERR_FRIEND_OFFLINE_S", 1)
+	SystemLine((blizzard or ns.L["%s has gone offline."]):format(BNetLink(entry) .. (tag and (" " .. tag) or "")))
+end
+
 -- after the first full check: from now on, logins and logouts are announced one by one.
 -- (Who was already online when you logged in isn't announced: no summary line since 0.3.2.)
 function Notify.FirstCheckDone()

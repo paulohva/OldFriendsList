@@ -115,7 +115,11 @@ end
 
 local function VarType(kind)
 	local t = Settings.VarType
-	if t then return kind == "boolean" and t.Boolean or t.Number end
+	if t then
+		if kind == "boolean" then return t.Boolean end
+		if kind == "string" then return t.String end
+		return t.Number
+	end
 	return kind
 end
 
@@ -179,32 +183,74 @@ local function AddKeybindingButton(layout)
 		L["Set the key under Key Bindings > Old Friends List."], false))
 end
 
--- checkbox backed by a getter/setter instead of a saved field
-local function AddProxyCheckbox(variable, name, tooltip, default, getter, setter)
-	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_" .. variable, VarType("boolean"),
-		name, default, getter, setter)
-	Settings.CreateCheckbox(category, setting, tooltip)
+
+-- Where to see Old Friends List: a dropdown with the two choices (like the setup's two cards).
+-- Built through Blizzard's own dropdown path, like the checkboxes (nothing addon-made that the
+-- Options search runs, see AddKeybindingButton).
+local function AddModeSection(layout)
+	AddHeader(layout, L["Where to see Old Friends List"])
+	local create = Settings.CreateDropdown or Settings.CreateDropDown
+	if not (create and Settings.CreateControlTextContainer) then return end
+	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_mode", VarType("string"),
+		L["Window"], "separate",
+		function() return ns.db.settings.socialMode == "integrated" and "integrated" or "separate" end,
+		function(value)
+			Options.SetMode(value == "integrated" and "integrated" or "separate")
+			-- the shortcut tab's checkbox shows off with the Social window, its choice otherwise
+			if Settings.NotifyUpdate then pcall(Settings.NotifyUpdate, "OldFriendsList_socialIcon") end
+		end)
+	local function Choices()
+		local container = Settings.CreateControlTextContainer()
+		container:Add("integrated", L["In the Social window (O)"])
+		container:Add("separate", L["Separate window"])
+		return container:GetData()
+	end
+	create(category, setting, Choices,
+		L["Old Friends List inside the game's Social window (O), or in a window of its own (Shift-O)."])
 end
 
+-- options for Old Friends List inside the game's Social window
 local function AddSocialSection(layout)
-	AddHeader(layout, L["Social window"])
-	AddProxyCheckbox("integrated", L["Show Old Friends List in the Social window (O)"],
-		L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."],
-		false,
-		function() return ns.db.settings.socialMode == "integrated" end,
-		function(value) Options.SetMode(value and "integrated" or "separate") end)
-	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
+	AddHeader(layout, L["Blizzard Social window"])
 	AddCheckbox("hideBNetDuplicates", L["Hide friends already shown by Battle.net"],
 		L["In the Social window, a character from your Old Friends List that a Battle.net friend is playing right now shows only on Blizzard's card, not in the Old Friends List group. It comes back when they log off or switch character."],
 		function() if ns.SocialList then ns.SocialList.Refresh() end end)
-	AddCheckbox("socialIcon", L["Show in the Social window"],
-		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Not shown when Old Friends List is already in that window."],
-		function() if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end end)
-	if CreateSettingsButtonInitializer then
-		layout:AddInitializer(CreateSettingsButtonInitializer(L["First-time setup"], L["Run the setup again"],
-			function() if ns.Setup then ns.Setup.Show() end end,
-			L["Choose again: Old Friends List in the Social window or in a separate window."], false))
+end
+
+-- options for the separate window
+local function AddSeparateSection(layout)
+	AddHeader(layout, L["Old Friends List window"])
+	AddCheckbox("showBNet", L["Show Battle.net friends playing WoW"],
+		L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."],
+		RefreshList)
+	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
+	-- The shortcut tab only exists with the separate window: with Old Friends List inside the
+	-- Social window it's off and can't be turned on (the saved choice comes back with the
+	-- separate window). Re-evaluated by the panel when the "Window" choice changes.
+	local s = ns.db.settings
+	local function Separate() return s.socialMode ~= "integrated" end
+	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_socialIcon", VarType("boolean"),
+		L["Shortcut tab in the Blizzard Social window"], ns.DEFAULTS.socialIcon,
+		function() return (s.socialIcon and Separate()) and true or false end,
+		function(value)
+			s.socialIcon = value and true or false
+			if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end
+		end)
+	local initializer = Settings.CreateCheckbox(category, setting,
+		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Only with the separate window: not shown when Old Friends List is already in that window."])
+	if initializer and initializer.AddModifyPredicate then
+		initializer:AddModifyPredicate(Separate)
+		if initializer.AddEvaluateStateCVar then initializer:AddEvaluateStateCVar("OldFriendsList_mode") end
 	end
+end
+
+-- the first-time setup, under its own title
+local function AddSetupSection(layout)
+	if not CreateSettingsButtonInitializer then return end
+	AddHeader(layout, L["First-time setup"])
+	layout:AddInitializer(CreateSettingsButtonInitializer(L["Social window or separate window"], L["Run the setup again"],
+		function() if ns.Setup then ns.Setup.Show() end end,
+		L["Choose again: Old Friends List in the Social window or in a separate window."], false))
 end
 
 local function Build()
@@ -226,24 +272,27 @@ local function Build()
 	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
 		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
 
+	Try(AddModeSection, layout)
 	Try(AddSocialSection, layout)
+	Try(AddSeparateSection, layout)
 
 	Try(AddHeader, layout, L["List"])
 	Try(AddCheckbox, "showDetails", L["Show level and zone"],
 		L["Show each friend's level, class and zone under their name. Turn it off to show only names."], RefreshList)
 	Try(AddCheckbox, "classColors", L["Class colors"],
 		L["Show friends' names in their class color, in the list, tooltips and chat messages."], RefreshList)
-	Try(AddCheckbox, "showBNet", L["Show Battle.net friends playing WoW"],
-		L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."],
-		RefreshList)
 
 	Try(AddHeader, layout, L["Notifications"])
 	Try(AddCheckbox, "notifyOnline", L["Online messages"], L["Show a message in chat when a friend logs in."])
 	Try(AddCheckbox, "notifyOffline", L["Offline messages"], L["Show a message in chat when a friend logs out."])
 	Try(AddCheckbox, "sound", L["Login sound"], L["Play a sound when a friend comes online."])
+	Try(AddCheckbox, "notifyBNet", L["Battle.net friends"],
+		L["Also announce when Battle.net friends who aren't on your Old Friends List log in or out of WoW Forever. Only with Old Friends List in the Social window, or with Battle.net friends shown in the separate window."])
 
 	Try(AddHeader, layout, L["Key Binding"])
 	Try(AddKeybindingButton, layout)
+
+	Try(AddSetupSection, layout)
 
 	Try(AddHeader, layout, L["Advanced"])
 	Try(AddIntervalSlider)

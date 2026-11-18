@@ -31,7 +31,8 @@ It works with any character, whether or not they use the addon.
   take the O key. You choose on first login (`/ofl setup` to choose again).
 - **Battle.net friends.** A character a Battle.net friend is playing right now shows as online at
   once. Optionally, the separate window also lists your Battle.net friends who are playing, and
-  the Social window can skip characters the game already shows on a Battle.net card.
+  the Social window can skip characters the game already shows on a Battle.net card. Battle.net
+  friends who aren't on your list get login and logout lines too, with their BattleTag.
 - **Minimap button.** Hover it to see who's online; click to open the list, right-click for the
   options or to hide the button. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share

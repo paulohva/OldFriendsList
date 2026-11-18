@@ -4,6 +4,36 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.0.2
+
+- **Login and logout lines for Battle.net friends** who aren't on your Old Friends List, when
+  they log in or out of WoW Forever: the classic line with their character and, in Battle.net
+  blue, their BattleTag (e.g. "[Sr Coxinha] Andre has come online."). Characters on your Old
+  Friends List keep their usual line, never twice.
+- Turn them on with the new option **Battle.net friends** under Notifications (off by default).
+  It applies with Old Friends List in the Social window, or with Battle.net friends shown in the
+  separate window. The Online messages, Offline messages and Login sound options apply to these
+  lines too. The game's own Battle.net alert names only the account (and not on a character
+  switch), which is why these lines name the character.
+- **Battle.net friends playing in another region** now show in the separate window too (with
+  "Other region" next to them) and get the login and logout lines. As with the other faction,
+  only a Battle.net whisper reaches them: no invite, Who or adding them to your Old Friends List.
+- **Battle.net friends on the other faction or in another region can't be added** to your Old
+  Friends List by name either (typed, or right-clicking their name in chat): they stay
+  Battle.net-only.
+- **After a `/reload` or a quick relog**, friends keep the status they had a moment ago (up to
+  10 minutes) instead of showing "Checking..." until checked again. That matters most in
+  dungeons and raids, where the game doesn't let the addon check anyone.
+- **Options, reorganised:** at the top, **Where to see Old Friends List** (a choice between the
+  Social window and the separate window), then a section with the options for each: **Blizzard
+  Social window** (hide friends already shown by Battle.net) and **Old Friends List window**
+  (Battle.net friends, and the tab in the Social window, now called **Shortcut tab in the
+  Blizzard Social window**). The first-time setup has its own section, near the end, before
+  Advanced.
+- **First-time setup in combat:** the Choose buttons wait for the end of the fight, with a line
+  saying so (the game doesn't let key bindings change mid-fight, so a choice made then could
+  leave the O / Shift-O keys as they were).
+
 ## 1.0.1
 
 - **Fix:** opening the Social window (O) in combat, soon after logging in or a `/reload`, could

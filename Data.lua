@@ -103,6 +103,19 @@ function Data.Add(input, info)
 	end
 	if key == Data.MyKey() then return nil, ns.L["You can't add yourself."] end
 	if Data.Has(key) then return nil, ns.L["%s is already on your list."]:format(Data.Display(key)) end
+	-- a Battle.net friend's character tells their faction even without a unit (a name typed or
+	-- clicked in chat); one in another region can only be reached through Battle.net
+	local BattleNet = ns.BattleNet
+	if BattleNet then
+		local here = BattleNet.Get(key)
+		if here then
+			local given = info or {}
+			info = { class = given.class or here.class, level = given.level or here.level,
+				faction = given.faction or here.faction }
+		elseif BattleNet.Shown(key) then
+			return nil, ns.L["%s plays in another region: only a Battle.net whisper reaches them."]:format(Data.Display(key))
+		end
+	end
 	local myFaction = Data.MyFaction()
 	if info and info.faction and myFaction and info.faction ~= myFaction then
 		return nil, ns.L["%s is on the other faction: you can't whisper or invite them."]:format(Data.Display(key))
@@ -300,4 +313,33 @@ ns.Listen("DB_READY", function()
 		if new and new ~= key and not ns.db.friends[new] then ns.db.friends[new] = f end
 	end
 	for old in pairs(moved) do ns.db.friends[old] = nil end
+end)
+
+-- After a /reload or a quick relog, the list starts from what it showed a moment ago instead of
+-- "Checking..." for everyone. That matters most in dungeons and raids, where the game blocks
+-- the checks: without this, nobody had a status until you left. What counts is how long ago
+-- the session ended (a /reload: seconds), not when each friend was last checked (in a dungeon
+-- that can be long ago). The checks confirm or correct it as soon as they can.
+local RESTORE_MAX = 10 * 60   -- seconds
+Data.RESTORE_MAX = RESTORE_MAX
+
+-- the game saves the addon's data right after this (also on /reload)
+ns.On("PLAYER_LOGOUT", function()
+	if not ns.db then return end
+	for key, f in pairs(ns.db.friends) do
+		f.lastStatus = Data.status[key]
+		f.statusAt = nil   -- (1.0.2 test builds kept a time per friend)
+	end
+	ns.db.statusSavedAt = time()
+end)
+
+ns.Listen("DB_READY", function()
+	local savedAt = ns.db.statusSavedAt
+	local age = type(savedAt) == "number" and (time() - savedAt) or nil
+	if not age or age < 0 or age > RESTORE_MAX then return end
+	for key, f in pairs(ns.db.friends) do
+		if f.lastStatus == "online" or f.lastStatus == "offline" then
+			Data.status[key] = f.lastStatus   -- quietly: no "has come online" for it
+		end
+	end
 end)
