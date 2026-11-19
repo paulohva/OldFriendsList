@@ -148,6 +148,27 @@ local function UpdatePartyButton(button, key)
 	if GameTooltip:IsOwned(button) then ShowPartyTooltip(button) end
 end
 
+-- The status dot exactly as on Blizzard's cards (SocialCardPresenceHolderTemplate and
+-- FriendsListSocialCardMixin:LayoutScaledPresenceHolderAnchors): 19x19, centred on the card's
+-- top-left corner at (3, -4), all of it grown with the game's text size, weighted 0.6.
+local DOT_SIZE, DOT_X, DOT_Y, DOT_WEIGHT = 19, 3, -4, 0.6
+
+local function TextScaleWeighted()
+	local manager = _G.TextSizeManager
+	local ok, scale = pcall(function() return manager and manager:GetScale() end)
+	scale = ok and tonumber(scale) or 1
+	return 1 + (scale - 1) * DOT_WEIGHT
+end
+
+local function LayoutPresence(row)
+	local w = TextScaleWeighted()
+	if row.dotScale == w then return end
+	row.dotScale = w
+	row.Presence:SetSize(DOT_SIZE * w, DOT_SIZE * w)
+	row.Presence:ClearAllPoints()
+	row.Presence:SetPoint("CENTER", row, "TOPLEFT", DOT_X * w, DOT_Y * w)
+end
+
 local selectedKey   -- the card clicked last (like Blizzard's cards: one selected; click again to clear)
 
 local function ShowSelection(row)
@@ -191,6 +212,7 @@ local function InitRow(row, elementData)
 	local online = Data.status[key] == "online"
 	row.Background:SetAtlas(online and "friends-card-default" or "friends-card-disabled", false)
 	row.Presence:SetAtlas(online and "friends-status-online" or "friends-status-offline", false)
+	LayoutPresence(row)
 	row.FriendName:SetText(UI.NameText(key, f))
 	local details = ns.db.settings.showDetails
 	row.Info:SetShown(details)
@@ -667,6 +689,10 @@ ns.Listen("PAUSE_CHANGED", OnDataChanged)
 -- the invite buttons depend on your group (who's in it, who leads it)
 ns.On("GROUP_ROSTER_UPDATE", OnDataChanged)
 ns.On("PARTY_LEADER_CHANGED", OnDataChanged)
+-- the game's text size changed (Options, Accessibility): the status dots follow, like Blizzard's
+if EventRegistry and EventRegistry.RegisterCallback then
+	pcall(EventRegistry.RegisterCallback, EventRegistry, "TextSizeManager.OnTextScaleUpdated", OnDataChanged, SocialList)
+end
 
 -- one scroll: what had to wait for the end of combat (moving or resizing Blizzard's list)
 ns.On("PLAYER_REGEN_ENABLED", function()

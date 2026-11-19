@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.1.2
+
+- The online/offline dot on Old Friends List cards in the Social window now matches Blizzard's
+  exactly: same size and place, and it grows with the game's text size like theirs.
+
 ## 1.1.1
 
 - **Fix:** after whispering a friend from Old Friends List, whispering someone from the game's
