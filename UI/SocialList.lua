@@ -148,6 +148,12 @@ local function UpdatePartyButton(button, key)
 	if GameTooltip:IsOwned(button) then ShowPartyTooltip(button) end
 end
 
+local selectedKey   -- the card clicked last (like Blizzard's cards: one selected; click again to clear)
+
+local function ShowSelection(row)
+	row.SelectedTexture:SetShown(row.key ~= nil and row.key == selectedKey)
+end
+
 local function InitRow(row, elementData)
 	local key = elementData and elementData.key
 	row.key = key
@@ -156,14 +162,31 @@ local function InitRow(row, elementData)
 	if not row.oflSetUp then
 		row.oflSetUp = true
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		-- Blizzard's selected card look
+		row.SelectedTexture = row:CreateTexture(nil, "ARTWORK", nil, -1)
+		row.SelectedTexture:SetAllPoints()
+		row.SelectedTexture:SetAtlas("friends-card-selected")
+		row.SelectedTexture:SetBlendMode("ADD")
+		-- a click selects; double-click to whisper (1.1.1): the first click also arms an invisible
+		-- link over the card, the second lands on it and the game opens the whisper itself
+		-- (UI.ArmWhisper: the chat stays clean)
 		row:SetScript("OnClick", function(self, button)
-			if button == "RightButton" then UI.OpenFriendMenu(self) end
+			if button == "RightButton" then
+				UI.OpenFriendMenu(self)
+				return
+			end
+			selectedKey = (selectedKey ~= self.key) and self.key or nil
+			for _, other in ipairs(rows) do if other.SelectedTexture then ShowSelection(other) end end
+			self.armed = UI.ArmWhisper(self, UI.WhisperLinkText(self.key))
 		end)
-		row:SetScript("OnDoubleClick", function(self) ns.Actions.Whisper(self.key) end)
-		row:SetScript("OnEnter", UI.ShowFriendTooltip)
-		row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		row:SetScript("OnDoubleClick", function(self)
+			-- (only when the link couldn't be armed: the "click the name" line in chat)
+			if not self.armed then ns.Actions.Whisper(self.key) end
+		end)
+		-- (highlight and tooltip: UI.HoverTracker, set up with the section)
 		row.PartyButton = MakePartyButton(row)
 	end
+	ShowSelection(row)
 	UpdatePartyButton(row.PartyButton, key)
 	local online = Data.status[key] == "online"
 	row.Background:SetAtlas(online and "friends-card-default" or "friends-card-disabled", false)
@@ -522,6 +545,10 @@ local function BuildSingleScroll()
 	section:SetPoint("TOPLEFT")
 	section:SetPoint("TOPRIGHT")
 	header = BuildHeader()
+	-- one lit card at a time (UI.HoverTracker), checked every frame while the section shows
+	local hoverPoll = CreateFrame("Frame", nil, section)
+	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(viewport, function(fn) for _, row in ipairs(rows) do fn(row) end end,
+		UI.ShowFriendTooltip))
 
 	-- the one scroll bar, exactly where Blizzard's own is (same offsets from the same place)
 	viewportBar = CreateFrame("EventFrame", nil, list, "MinimalScrollBar")
@@ -565,6 +592,7 @@ local function BuildTwoScrolls()
 	section.copyWidth = topAnchors < 2
 
 	header = BuildHeader()
+	local hoverPoll = CreateFrame("Frame", nil, section)
 
 	scrollBox = CreateFrame("Frame", nil, section, "WowScrollBoxList")
 	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
@@ -582,6 +610,8 @@ local function BuildTwoScrolls()
 	if view.SetPadding then view:SetPadding(DOT_MARGIN, 0, DOT_MARGIN, 0, ROW_SPACING) end
 	view:SetElementInitializer(ROW_TEMPLATE, InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
+	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
+		UI.ShowFriendTooltip))
 
 	section:Hide()
 end

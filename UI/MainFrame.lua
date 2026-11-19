@@ -73,9 +73,140 @@ end
 local Actions = {}
 ns.Actions = Actions
 
+--------------------------------------------------------------------------------
+-- Whispers (1.1.1). The game's own "open a whisper" (ChatFrameUtil.SendTell / SendBNetTell),
+-- called by an addon, leaves the chat's globals (ACTIVE_CHAT_EDIT_BOX, LAST_ACTIVE_CHAT_EDIT_BOX,
+-- CHAT_FOCUS_OVERRIDE) tainted until /reload. Blizzard's Social window then reads them when you
+-- whisper from its own cards, its protected SearchFriends() gets blocked and its list empties.
+-- Tested in game (taintLog, /ofl diag): opening the chat's input box ourselves taints them too,
+-- and a name link on our cards was unreliable. What stays clean: a line in chat with the name as
+-- a link. Clicking it is the game's own whisper, exactly like clicking a name in chat.
+--------------------------------------------------------------------------------
+
+local function ChatLine(text)
+	local info = ChatTypeInfo and ChatTypeInfo.SYSTEM
+	DEFAULT_CHAT_FRAME:AddMessage(text, info and info.r or 1, info and info.g or 1, info and info.b or 0)
+end
+
 function Actions.Whisper(key)
-	local tell = (ChatFrameUtil and ChatFrameUtil.SendTell) or ChatFrame_SendTell
-	if tell then tell(Data.Display(key)) end
+	local name = Data.Display(key)
+	ChatLine(L["Click the name to whisper: %s"]:format(("|Hplayer:%s|h[%s]|h"):format(name, name)))
+end
+
+--------------------------------------------------------------------------------
+-- Link layers (1.1.1): a frame made from Blizzard's own InlineHyperlinkFrameTemplate, over a
+-- name or a button. Its click script comes from the template (SetItemRef(link, text, button),
+-- no chat window needed), so a click on its link runs only the game's code: the whisper opens
+-- straight away and the chat stays clean. We never set its click script: a script set by an
+-- addon runs as the addon's code. Only the hover is ours.
+--------------------------------------------------------------------------------
+
+local LINK_PAD = (" "):rep(60)
+
+-- the link around `text`, padded with spaces inside it so the whole line (or button) takes clicks;
+-- centred: spaces on both sides
+local function LinkText(target, text, centred)
+	return ("|H%s|h%s%s%s|h"):format(target, centred and LINK_PAD or "", text, LINK_PAD)
+end
+
+function UI.PlayerLinkText(name, text, centred)
+	return LinkText("player:" .. name, text or name, centred)
+end
+
+-- the game's Battle.net name link (name:id:line:type:target, as the chat writes it), or nil
+function UI.BNetLinkText(entry, text, centred)
+	local name, id = entry and entry.accountName, entry and tonumber(entry.bnetAccountID)
+	if type(name) ~= "string" or not id then return nil end
+	return LinkText(("BNplayer:%s:%d:0:BN_WHISPER:%s"):format(name, id, name), text or name, centred)
+end
+
+local linkTemplateOK
+-- a link layer over `region` of `owner`, or nil when the template isn't there. `hover`: the
+-- layer keeps the owner highlighted while the mouse is on it (for a lone button; list rows
+-- get theirs from UI.HoverTracker)
+function UI.CreateLinkLayer(owner, region, fontObject, centred, hover)
+	local ok, layer = pcall(CreateFrame, "Frame", nil, owner, "InlineHyperlinkFrameTemplate")
+	linkTemplateOK = ok and layer ~= nil
+	if not linkTemplateOK then return nil end
+	layer:SetAllPoints(region)
+	layer:SetFrameLevel(owner:GetFrameLevel() + 2)
+	layer:EnableMouse(true)
+	-- (a click on the link is the link's only: the owner under it doesn't get it too)
+	if layer.SetPropagateMouseClicks then pcall(layer.SetPropagateMouseClicks, layer, false) end
+	-- (the template's hover shows the link in a tooltip: not for player links)
+	layer:SetScript("OnHyperlinkEnter", nil)
+	layer:SetScript("OnHyperlinkLeave", nil)
+	if hover and owner.LockHighlight then
+		layer:SetScript("OnEnter", function() owner:LockHighlight() end)
+		layer:SetScript("OnLeave", function() owner:UnlockHighlight() end)
+	end
+	local text = layer:CreateFontString(nil, "ARTWORK", fontObject or "GameFontNormalLarge")
+	text:SetPoint(centred and "CENTER" or "LEFT")
+	text:SetJustifyH(centred and "CENTER" or "LEFT")
+	text:SetWordWrap(false)
+	layer.Text = text
+	return layer
+end
+
+-- Double-click to whisper, clean: the first click (ours) lays an invisible link over the whole
+-- owner for a moment; the second click lands on it, and the game opens the whisper itself.
+-- `linkText`: UI.PlayerLinkText / UI.BNetLinkText with "" as the text. False when it can't (no
+-- template, or no link): the caller then does the whisper its own way.
+local ARM_TIME = 0.5   -- seconds: about a double-click
+function UI.ArmWhisper(owner, linkText)
+	if not linkText then return false end
+	if owner.ArmLayer == nil then owner.ArmLayer = UI.CreateLinkLayer(owner, owner, nil, true) or false end
+	local layer = owner.ArmLayer
+	if not layer then return false end
+	-- (big letters: the link's spaces then fill the owner's height too, and all of it takes the click)
+	local font = layer.Text:GetFont()
+	if font then layer.Text:SetFont(font, math.max(12, math.min(64, math.floor(owner:GetHeight())))) end
+	layer.Text:SetText(linkText)
+	layer:Show()
+	local armedAt = GetTime()
+	layer.armedAt = armedAt
+	C_Timer.After(ARM_TIME, function()
+		if layer.armedAt == armedAt then layer:Hide() end
+	end)
+	return true
+end
+
+-- the invisible link for a friend (or a Battle.net friend who's only reachable through Battle.net)
+function UI.WhisperLinkText(key, bnet)
+	if bnet and not ns.BattleNet.Reachable(bnet) then return UI.BNetLinkText(bnet, "", true) end
+	return key and UI.PlayerLinkText(Data.Display(key), "", true) or nil
+end
+
+-- One hovered row at a time, with its highlight and tooltip, read from the mouse's position
+-- every frame (a link armed over a row takes the mouse from it: going by enter/leave events,
+-- rows stayed lit). `area`: the list's visible part; `eachRow(fn)`: calls fn for each row;
+-- `tooltip(row)`: shows the row's tooltip. Returns the OnUpdate function.
+function UI.HoverTracker(area, eachRow, tooltip)
+	local current
+	return function()
+		local found
+		if area:IsVisible() and area:IsMouseOver() then
+			eachRow(function(row)
+				if not found and row:IsShown() and row:IsMouseOver() then found = row end
+			end)
+		end
+		if found == current then return end
+		if current then
+			current:UnlockHighlight()
+			if GameTooltip:IsOwned(current) then GameTooltip:Hide() end
+		end
+		current = found
+		if found then
+			found:LockHighlight()
+			tooltip(found)
+		end
+	end
+end
+
+-- for /ofl diag
+function UI.LinkInfo()
+	if linkTemplateOK == nil then return "not used yet" end
+	return linkTemplateOK and "InlineHyperlinkFrameTemplate" or "template missing"
 end
 
 function Actions.Invite(key)
@@ -83,11 +214,13 @@ function Actions.Invite(key)
 	if invite then invite(Data.Display(key)) end
 end
 
--- a Battle.net whisper to a Battle.net friend (works across factions)
+-- a Battle.net whisper to a Battle.net friend (works across factions, realm types and regions):
+-- the game's own Battle.net name link in chat, as it writes them ("BNplayer:name:id:...")
 function Actions.WhisperBNet(entry)
-	local name = entry and entry.accountName
-	local tell = (ChatFrameUtil and ChatFrameUtil.SendBNetTell) or ChatFrame_SendBNetTell
-	if name and tell then tell(name) end
+	local name, id = entry and entry.accountName, entry and tonumber(entry.bnetAccountID)
+	if type(name) ~= "string" or not id then return end
+	local link = ("|HBNplayer:%s:%d:0:BN_WHISPER:%s|h[%s]|h"):format(name, id, name, name)
+	ChatLine(L["Click the name for a Battle.net whisper: %s"]:format(link))
 end
 
 -- can you invite this friend right now? true; or false, why (a tooltip line) and a short reason
@@ -368,11 +501,35 @@ end
 
 -- whisper the selected row: by name, or through Battle.net for the other faction / region
 local function WhisperSelected()
+	-- (a click on the button's link already opened the whisper)
+	local layer = whisperButton and whisperButton.LinkLayer
+	if layer and layer:IsShown() and layer:IsMouseOver() then return end
 	if selectedBNet and not Reachable(selectedBNet) then
 		Actions.WhisperBNet(selectedBNet)
 	elseif selectedKey then
 		Actions.Whisper(selectedKey)
 	end
+end
+
+-- the link over the Whisper button (UI.CreateLinkLayer) points at the selected friend: a click
+-- opens the whisper with the game's own code. Hidden while the button is disabled.
+local function UpdateWhisperLink()
+	local layer = whisperButton and whisperButton.LinkLayer
+	if not layer then return end
+	local text
+	if whisperButton:IsEnabled() then
+		local label = G("WHISPER", "Whisper")
+		if selectedBNet and not Reachable(selectedBNet) then
+			text = UI.BNetLinkText(selectedBNet, label, true)
+		elseif selectedKey then
+			text = UI.PlayerLinkText(Data.Display(selectedKey), label, true)
+		end
+	end
+	layer.Text:SetText(text or "")
+	layer:SetShown(text ~= nil)
+	-- (the button's own label hides under the link's, which says the same)
+	local label = whisperButton:GetFontString()
+	if label then label:SetAlpha(text and 0 or 1) end
 end
 
 local function UpdateButtons()
@@ -381,10 +538,12 @@ local function UpdateButtons()
 		whisperButton:SetEnabled(true)
 		inviteButton:SetEnabled(Reachable(selectedBNet) and Actions.CanInvite(selectedKey, true) and true or false)
 		removeButton:SetEnabled(false)
+		UpdateWhisperLink()
 		return
 	end
 	local has = selectedKey and Data.Has(selectedKey)
 	whisperButton:SetEnabled(has and true or false)
+	UpdateWhisperLink()
 	inviteButton:SetEnabled(has and Actions.CanInvite(selectedKey) and true or false)
 	removeButton:SetEnabled(has and true or false)
 end
@@ -403,19 +562,22 @@ local function InitRow(row, elementData)
 	if not row.oflSetUp then
 		row.oflSetUp = true
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		-- double-click to whisper (1.1.1): the first click selects and arms an invisible link over
+		-- the row, the second lands on it and the game opens the whisper (UI.ArmWhisper)
 		row:SetScript("OnClick", function(self, button)
 			SelectKey(self.key, self.bnet)
 			if button == "RightButton" then
 				if self.bnet then OpenBNetMenu(self) else OpenRowMenu(self) end
+			else
+				self.armed = UI.ArmWhisper(self, UI.WhisperLinkText(self.key, self.bnet))
 			end
 		end)
 		row:SetScript("OnDoubleClick", function(self)
+			-- (only when the link couldn't be armed: the "click the name" line in chat)
+			if self.armed then return end
 			if self.bnet and not Reachable(self.bnet) then Actions.WhisperBNet(self.bnet) else Actions.Whisper(self.key) end
 		end)
-		row:SetScript("OnEnter", function(self)
-			if self.bnet then ShowBNetTooltip(self) else ShowTooltip(self) end
-		end)
-		row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		-- (highlight and tooltip: UI.HoverTracker, set up with the list)
 	end
 	local details = ns.db.settings.showDetails
 	row.Info:SetShown(details)
@@ -583,6 +745,10 @@ local function Build()
 	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
 	listView:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, listView)
+	-- one lit row at a time (UI.HoverTracker), checked every frame while the window is open
+	local hoverPoll = CreateFrame("Frame", nil, frame)
+	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
+		function(row) if row.bnet then ShowBNetTooltip(row) else ShowTooltip(row) end end))
 
 	emptyText = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	emptyText:SetPoint("CENTER", inset, "CENTER", 0, 20)
@@ -594,6 +760,8 @@ local function Build()
 	add:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 4)
 	whisperButton = MakeButton(frame, G("WHISPER", "Whisper"), 78, WhisperSelected)
 	whisperButton:SetPoint("LEFT", add, "RIGHT", 2, 0)
+	-- (without the template, the button itself writes the "click the name" line in chat)
+	whisperButton.LinkLayer = UI.CreateLinkLayer(whisperButton, whisperButton, "GameFontNormal", true, true)
 	inviteButton = MakeButton(frame, G("INVITE", "Invite"), 78, function()
 		if selectedKey then Actions.Invite(selectedKey) end
 	end)

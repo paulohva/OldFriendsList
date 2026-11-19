@@ -130,6 +130,14 @@ local function Diag()
 	end
 	table.sort(blocked)
 	print("  blocked actions this session: " .. (#blocked > 0 and ("|cffff4040" .. table.concat(blocked, "; ") .. "|r") or "|cff20ff20none|r"))
+	-- the chat's globals: tainted ones make Blizzard's Social window fail (SearchFriends blocked)
+	local tainted = {}
+	for _, name in ipairs({ "ACTIVE_CHAT_EDIT_BOX", "LAST_ACTIVE_CHAT_EDIT_BOX", "CHAT_FOCUS_OVERRIDE" }) do
+		local secure, by = issecurevariable(name)
+		if not secure then tainted[#tainted + 1] = ("%s (%s)"):format(name, tostring(by)) end
+	end
+	print("  chat: " .. (#tainted > 0 and ("|cffff4040tainted: " .. table.concat(tainted, ", ") .. "|r") or "|cff20ff20clean|r")
+		.. "  [name links: " .. ns.UI.LinkInfo() .. "]")
 end
 
 local function SetToggle(field, label, arg)

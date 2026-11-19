@@ -4,6 +4,20 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.1.1
+
+- **Fix:** after whispering a friend from Old Friends List, whispering someone from the game's
+  own Social window cards could show "OldFriendsList has been blocked from an action" and leave
+  Favorites and the friends list empty until a `/reload`. Whispers from Old Friends List are now
+  opened by the game itself, so this can't happen anymore.
+- Double-click a friend (Social window or separate window) or use the **Whisper** button: the
+  whisper opens straight away, as before. In the Social window, a single click now selects the
+  card, like Blizzard's.
+- **Whisper** in the right-click menu writes a line in chat with the friend's name to click
+  (the menu can't open it directly without the same problem).
+- The highlight on Old Friends List cards and rows follows the mouse properly (only one at a
+  time, no flicker).
+
 ## 1.1.0
 
 - **Old Friends List names in the mail:** when you type a name in the mail's To: field, the
