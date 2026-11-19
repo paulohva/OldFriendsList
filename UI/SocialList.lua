@@ -161,6 +161,8 @@ local function TextScaleWeighted()
 end
 
 local function LayoutPresence(row)
+	-- (its own frame stays just above the card, whatever level the card gets)
+	if row.PresenceHolder then row.PresenceHolder:SetFrameLevel(row:GetFrameLevel() + 1) end
 	local w = TextScaleWeighted()
 	if row.dotScale == w then return end
 	row.dotScale = w
@@ -184,6 +186,12 @@ local function InitRow(row, elementData)
 		row.oflSetUp = true
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		-- Blizzard's selected card look
+		-- the status dot in a frame of its own over the card, like Blizzard's PresenceHolder: the
+		-- card's highlight (drawn over its own textures, additive) doesn't wash it out on hover
+		row.PresenceHolder = CreateFrame("Frame", nil, row)
+		row.PresenceHolder:SetAllPoints()
+		row.PresenceHolder:SetFrameLevel(row:GetFrameLevel() + 1)
+		row.Presence:SetParent(row.PresenceHolder)
 		row.SelectedTexture = row:CreateTexture(nil, "ARTWORK", nil, -1)
 		row.SelectedTexture:SetAllPoints()
 		row.SelectedTexture:SetAtlas("friends-card-selected")
