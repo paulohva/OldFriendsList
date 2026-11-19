@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.1.4
+
+- Closing the Social window or the separate window clears the selection of Old Friends List
+  friends.
+
 ## 1.1.3
 
 - With the mouse on an Old Friends List card in the Social window, its online/offline dot keeps
