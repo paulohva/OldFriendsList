@@ -296,7 +296,7 @@ local function SeenUnit(unit)
 	local zone = ZoneOfUnit(unit, key)
 	ns.Debug("%s is %s: level %s, class %s, zone %s", unit, key, tostring(info and info.level),
 		tostring(info and info.class), tostring(zone))
-	Data.UpdateInfo(key, info and info.class, info and info.level, zone)
+	Data.UpdateInfo(key, info and info.class, info and info.level, zone, info and info.realmType)
 	pending[key] = nil
 	Data.Seen(key)
 end

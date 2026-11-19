@@ -10,6 +10,8 @@
 --    a chat line too (notifyBNet, see BattleNet.ShouldNotify); Old Friends keep their own line.
 --    Friends playing in another region are shown too, with a chat line, but only a Battle.net
 --    whisper reaches them (no invite, Who or adding them: names repeat across regions).
+--  * 1.0.3: the same for characters on another realm type (PvP / PvE / RP / RP-PvP, see
+--    Data.RealmType): Battle.net whisper only.
 -- Everything is read with ns.Safe (values the game keeps secret count as unknown).
 --------------------------------------------------------------------------------
 
@@ -65,6 +67,7 @@ local function Entry(account, game)
 		class = ClassFile(Safe.Value(game.className), Safe.Value(game.playerGuid)),
 		zone = type(zone) == "string" and zone ~= "" and zone or nil,
 		faction = Safe.Value(game.factionName),
+		realmType = Data.RealmType(Safe.Value(game.realmName)) or Data.RealmType(Safe.Value(game.realmDisplayName)),
 		accountName = Safe.Value(account.accountName),   -- for a Battle.net whisper
 		battleTag = Safe.Value(account.battleTag),
 		bnetAccountID = Safe.Value(account.bnetAccountID),
@@ -146,7 +149,7 @@ local function Update()
 	-- Old Friends seen through Battle.net: online now, with what their game says
 	for key, e in pairs(found) do
 		if Data.Has(key) then
-			Data.UpdateInfo(key, e.class, e.level, e.zone)
+			Data.UpdateInfo(key, e.class, e.level, e.zone, e.realmType)
 			if Presence then Presence.Resolve(key) end
 			Data.Seen(key)
 		end
@@ -228,9 +231,19 @@ function BattleNet.SameFaction(e)
 end
 
 -- can you whisper them by name, invite them, look them up with Who, add them to the list?
--- Not on the other faction nor in another region: there, only a Battle.net whisper
+-- Not on the other faction, another realm type (PvP / PvE / RP...) nor in another region:
+-- there, only a Battle.net whisper
 function BattleNet.Reachable(e)
-	return not (e and e.otherRegion) and BattleNet.SameFaction(e)
+	return not (e and e.otherRegion) and BattleNet.SameFaction(e) and Data.SameRealmType(e and e.realmType)
+end
+
+-- the Battle.net friend's character (this region) for a Battle.net account id, or nil
+function BattleNet.ByAccount(id)
+	if id == nil then return nil end
+	for _, e in pairs(online) do
+		if e.bnetAccountID == id then return e end
+	end
+	return nil
 end
 
 -- for /ofl diag
