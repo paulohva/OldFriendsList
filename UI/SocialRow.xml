@@ -31,9 +31,11 @@
 				</Texture>
 			</Layer>
 			<Layer level="OVERLAY">
-				<!-- like Blizzard's presence holder: centred on the card's top-left corner, offset (3, -4) -->
+				<!-- like Blizzard's presence holder (SocialCardPresenceHolderTemplate): 19x19, centred on
+				     the card's top-left corner, offset (3, -4); both follow the game's text size
+				     (UI/SocialList.lua, LayoutPresence) -->
 				<Texture parentKey="Presence" atlas="friends-status-online">
-					<Size x="16" y="16"/>
+					<Size x="19" y="19"/>
 					<Anchors>
 						<Anchor point="CENTER" relativePoint="TOPLEFT" x="3" y="-4"/>
 					</Anchors>
