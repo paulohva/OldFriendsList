@@ -20,6 +20,7 @@ Comm.lua
 Presence.lua
 BattleNet.lua
 Menus.lua
+Mail.lua
 UI\Row.xml
 UI\MainFrame.lua
 UI\SocialTab.lua

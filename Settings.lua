@@ -281,6 +281,8 @@ local function Build()
 		L["Show each friend's level, class and zone under their name. Turn it off to show only names."], RefreshList)
 	Try(AddCheckbox, "classColors", L["Class colors"],
 		L["Show friends' names in their class color, in the list, tooltips and chat messages."], RefreshList)
+	Try(AddCheckbox, "mailNames", L["Names in the mail"],
+		L["When you type a name in the mail's To: field, also suggest the friends on your Old Friends List."])
 
 	Try(AddHeader, layout, L["Notifications"])
 	Try(AddCheckbox, "notifyOnline", L["Online messages"], L["Show a message in chat when a friend logs in."])

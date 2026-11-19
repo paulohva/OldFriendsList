@@ -195,7 +195,7 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		if not key then ns.Print("Usage: /ofl ping <first last>") return end
 		Presence.PingNow(key)
 	elseif cmd == "diag" then
-		Diag()
+		if rest:lower() == "mail" then ns.Mail.Diag() else Diag() end
 	elseif cmd == "setup" then
 		ns.Setup.Show()
 	else

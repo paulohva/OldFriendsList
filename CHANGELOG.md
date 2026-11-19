@@ -4,6 +4,14 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.1.0
+
+- **Old Friends List names in the mail:** when you type a name in the mail's To: field, the
+  game's suggestions now include the friends on your Old Friends List too (online first), after
+  the game's own. Pick one with Tab, Enter or a click, as always. Only friends you can mail are
+  suggested (your faction and realm type). Turn it off in the options (**Names in the mail**,
+  under List). Thanks to nvrtv on CurseForge for the idea.
+
 ## 1.0.3
 
 - **Realm types:** characters on another realm type (PvP, PvE, RP, RP-PvP) can't be whispered
