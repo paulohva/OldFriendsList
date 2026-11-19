@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.1.3
+
+- With the mouse on an Old Friends List card in the Social window, its online/offline dot keeps
+  its colour, like on Blizzard's cards (the card's highlight used to wash it out).
+
 ## 1.1.2
 
 - The online/offline dot on Old Friends List cards in the Social window now matches Blizzard's
