@@ -789,6 +789,8 @@ local function Build()
 	if close then close:SetScript("OnClick", function() frame:Hide() end) end
 
 	tinsert(UISpecialFrames, "OldFriendsListFrame")
+	-- closing the window clears the selection (1.1.4)
+	frame:HookScript("OnHide", function() SelectKey(nil, nil) end)
 	frame:Hide()
 end
 
