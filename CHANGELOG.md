@@ -6,6 +6,9 @@ All notable changes to Old Friends List are listed here.
 
 ## 1.1.4
 
+- In the Social window, only one card is selected at a time: selecting an Old Friends List card
+  clears the selection on Blizzard's cards (Favorites, friends), and selecting one of those
+  clears ours.
 - Closing the Social window or the separate window clears the selection of Old Friends List
   friends.
 

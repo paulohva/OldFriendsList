@@ -184,6 +184,18 @@ local function SetSelectedKey(key)
 	end
 end
 
+-- One selected card in the whole window (1.1.4): Blizzard's selection is cleared when one of ours
+-- gets selected.
+-- (Its own ClearSelections: the card it leaves keeps "not selected" written by us until its list
+-- rebuilds, which it does on every Battle.net update; only a click on its cards reads that, and
+-- that click runs nothing protected. Checked with taintLog 2: nothing blocked, chat clean.)
+local function ClearBlizzardSelection()
+	local behavior = list and list.selectionBehavior
+	if not (behavior and behavior.HasSelection and behavior.ClearSelections) then return end
+	local ok, has = pcall(behavior.HasSelection, behavior)
+	if ok and has then pcall(behavior.ClearSelections, behavior) end
+end
+
 local function InitRow(row, elementData)
 	local key = elementData and elementData.key
 	row.key = key
@@ -212,6 +224,7 @@ local function InitRow(row, elementData)
 				return
 			end
 			SetSelectedKey((selectedKey ~= self.key) and self.key or nil)
+			if selectedKey then ClearBlizzardSelection() end
 			self.armed = UI.ArmWhisper(self, UI.WhisperLinkText(self.key))
 		end)
 		row:SetScript("OnDoubleClick", function(self)
@@ -669,6 +682,14 @@ local function Install()
 		list:HookScript("OnShow", function() SocialList.Refresh() end)
 		-- closing the window (or leaving the friends tab) clears our selection (1.1.4)
 		list:HookScript("OnHide", function() SetSelectedKey(nil) end)
+		-- a card of Blizzard's selected: ours isn't anymore (a secure
+		-- post-hook: Blizzard's code runs first, untouched)
+		local behavior = list.selectionBehavior
+		if behavior and type(behavior.ToggleSelect) == "function" then
+			hooksecurefunc(behavior, "ToggleSelect", function()
+				if selectedKey and behavior:HasSelection() then SetSelectedKey(nil) end
+			end)
+		end
 		local bar = list.FilterBar and list.FilterBar.SearchBar
 		if bar and bar.HookScript then bar:HookScript("OnTextChanged", function() SocialList.Refresh() end) end
 	end)
