@@ -138,6 +138,9 @@ if locale == "ptBR" then
 	L["Add %s to Old Friends List"] = "Adicionar %s à Old Friends List"
 	L["Remove %s from Old Friends List"] = "Remover %s da Old Friends List"
 	L["Statuses may be out of date"] = "O status pode estar desatualizado"
+	L["Names in the mail"] = "Nomes no correio"
+	L["When you type a name in the mail's To: field, also suggest the friends on your Old Friends List."] =
+		"Ao escrever um nome no campo A: do correio, sugere também os amigos da sua Old Friends List."
 	L["The game doesn't let the addon check your friends right now (%s). They're checked again as soon as it does."] =
 		"O jogo não deixa o addon verificar seus amigos agora (%s). Eles são verificados de novo assim que der."
 	L["Other region: double-click for a Battle.net whisper."] = "Outra região: clique duas vezes para sussurrar pelo Battle.net."

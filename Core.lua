@@ -31,6 +31,7 @@ local DEFAULTS = {
 	hideBNetDuplicates = false, -- Social window: hide Old Friends a Battle.net friend is playing right now
 	showBNet = false,        -- separate window: also list Battle.net friends playing this game
 	notifyBNet = false,      -- chat lines for Battle.net friends not on the list (opt-in, in the options; see BattleNet.ShouldNotify)
+	mailNames = true,        -- Old Friends List names in the mail's "To:" suggestions (1.1.0)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS

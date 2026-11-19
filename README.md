@@ -34,6 +34,8 @@ It works with any character, whether or not they use the addon.
   the Social window can skip characters the game already shows on a Battle.net card. Battle.net
   friends who aren't on your list get login and logout lines too, with their BattleTag.
   Right-click a Battle.net friend in the Social window to add the character they're playing.
+- **Mail.** Typing a name in the mail's To: field suggests the friends on your list too, next to
+  the game's own suggestions.
 - **Minimap button.** Hover it to see who's online; click to open the list, right-click for the
   options or to hide the button. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
