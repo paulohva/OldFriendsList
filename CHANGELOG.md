@@ -4,6 +4,12 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.1
+
+- **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked
+  from an action") could still show up in combat: opening the separate window for the first
+  time, or the first click on a friend, used something the game forbids mid-fight. Gone.
+
 ## 1.2.0
 
 - **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked

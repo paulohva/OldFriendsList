@@ -131,8 +131,9 @@ function UI.CreateLinkLayer(owner, region, fontObject, centred, hover)
 	layer:SetAllPoints(region)
 	layer:SetFrameLevel(owner:GetFrameLevel() + 2)
 	layer:EnableMouse(true)
-	-- (a click on the link is the link's only: the owner under it doesn't get it too)
-	if layer.SetPropagateMouseClicks then pcall(layer.SetPropagateMouseClicks, layer, false) end
+	-- (No SetPropagateMouseClicks here: it's forbidden in combat, and building a layer then, e.g.
+	-- opening the separate window for the first time mid-fight, had the game block it and blame
+	-- us. Frames don't pass clicks to what's under them anyway.)
 	-- (the template's hover shows the link in a tooltip: not for player links)
 	layer:SetScript("OnHyperlinkEnter", nil)
 	layer:SetScript("OnHyperlinkLeave", nil)
