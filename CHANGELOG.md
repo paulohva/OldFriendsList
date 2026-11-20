@@ -4,6 +4,17 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.3
+
+- **Fix:** moving the mouse straight onto a card's Invite button (from the right) sometimes showed
+  the card's tooltip instead of the button's, and the button's could then stay on the card.
+- **Fix:** a friend's tooltip could take a moment to show, right after the mouse came from a
+  player or creature in the world (whose tooltip was still fading). It shows at once now.
+- Offline friends read like Blizzard's cards: "Last online 3 hours ago" (in the game's own words,
+  in any language) on the card and in its tooltip, instead of "Offline, last seen 3 hours ago".
+- Friend tooltips without the "Double-click to whisper" line, like Blizzard's. It stays only
+  where the whisper goes through Battle.net (other faction, realm type or region).
+
 ## 1.2.2
 
 - **Fix:** after the mouse went over a card's Invite button and back onto the card, the card's

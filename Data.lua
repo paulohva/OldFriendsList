@@ -302,6 +302,38 @@ function Data.LevelClass(f)
 	return className
 end
 
+-- An offline friend, worded like Blizzard's Social window cards (FriendsListUtil.GetLastOnlineText,
+-- 1.2.3): "Last online 3 hours ago" with the game's own strings, so in the game's language
+-- exactly as on its cards; "Offline" when never seen, or over a year ago. (Ours when the game's
+-- strings aren't there.)
+local SECONDS_IN = { minute = 60, hour = 3600, day = 86400, month = 2592000, year = 31536000 }
+
+local function GameAgo(t)
+	local d = time() - t
+	local function Format(name, n)
+		local s = _G[name]
+		return type(s) == "string" and s:format(n) or nil
+	end
+	if d < SECONDS_IN.minute then return type(_G.LASTONLINE_SECS) == "string" and _G.LASTONLINE_SECS or nil end
+	if d < SECONDS_IN.hour then return Format("LASTONLINE_MINUTES", math.floor(d / SECONDS_IN.minute)) end
+	if d < SECONDS_IN.day then return Format("LASTONLINE_HOURS", math.floor(d / SECONDS_IN.hour)) end
+	if d < SECONDS_IN.month then return Format("LASTONLINE_DAYS", math.floor(d / SECONDS_IN.day)) end
+	if d < SECONDS_IN.year then return Format("LASTONLINE_MONTHS", math.floor(d / SECONDS_IN.month)) end
+	return nil
+end
+
+function Data.LastOnline(t)
+	local offline = ns.G("FRIENDS_LIST_OFFLINE", ns.L["Offline"])
+	if not t or time() - t >= SECONDS_IN.year then return offline end
+	local template = _G.BNET_LAST_ONLINE_TIME
+	local ago = GameAgo(t)
+	if type(template) == "string" and ago then
+		local ok, text = pcall(string.format, template, ago)
+		if ok then return text end
+	end
+	return ns.L["Last online %s"]:format(Data.Ago(t))
+end
+
 -- "2 hours ago" (translated), or nil when never seen
 function Data.Ago(t)
 	if not t then return nil end
