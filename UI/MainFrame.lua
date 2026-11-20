@@ -184,6 +184,20 @@ end
 -- `tooltip(row)`: shows the row's tooltip. Returns the OnUpdate function.
 -- Called with "hide" (the list closed): nothing lit, its tooltip gone at once, as Blizzard's
 -- cards do when their window closes.
+-- the tooltip shown belongs to something on the row, under the mouse (its Invite button)?
+-- Only things inside the row count: a unit in the world owns the tooltip through UIParent,
+-- which is always "under the mouse", and blocked the row's tooltip until that one faded.
+local function TooltipTakenBy(row)
+	local owner = GameTooltip:IsShown() and GameTooltip:GetOwner()
+	if not owner or owner == row or not (owner.IsMouseOver and owner:IsMouseOver()) then return false end
+	local parent = owner.GetParent and owner:GetParent()
+	for _ = 1, 4 do
+		if parent == row then return true end
+		parent = parent and parent.GetParent and parent:GetParent()
+	end
+	return false
+end
+
 function UI.HoverTracker(area, eachRow, tooltip)
 	local current
 	return function(hide)
@@ -196,12 +210,7 @@ function UI.HoverTracker(area, eachRow, tooltip)
 		if found and found == current then
 			-- (1.2.2) still on the same row, but its tooltip went: a button on it (Invite) showed
 			-- its own and hid it on leaving. Back on the row itself: show the row's again.
-			if not GameTooltip:IsOwned(found) then
-				local owner = GameTooltip:IsShown() and GameTooltip:GetOwner()
-				if not (owner and owner ~= found and owner.IsMouseOver and owner:IsMouseOver()) then
-					tooltip(found)
-				end
-			end
+			if not GameTooltip:IsOwned(found) and not TooltipTakenBy(found) then tooltip(found) end
 			return
 		end
 		if found == current then return end
@@ -212,7 +221,9 @@ function UI.HoverTracker(area, eachRow, tooltip)
 		current = found
 		if found then
 			found:LockHighlight()
-			tooltip(found)
+			-- (1.2.3) straight onto its Invite button (from the right): that button's tooltip
+			-- stays; the row's comes when the mouse moves onto the row itself
+			if not TooltipTakenBy(found) then tooltip(found) end
 		end
 	end
 end
@@ -438,8 +449,8 @@ local function InfoLine(key, f)
 	if Data.status[key] == nil then
 		return GREY .. prefix .. L["Checking..."] .. "|r"
 	end
-	local ago = Data.Ago(f.lastSeen)
-	return GREY .. prefix .. (ago and L["Offline, last seen %s"]:format(ago) or L["Offline"]) .. "|r"
+	-- (1.2.3) "Last online 3 hours ago", in Blizzard's words (Data.LastOnline)
+	return GREY .. prefix .. Data.LastOnline(f.lastSeen) .. "|r"
 end
 
 local function ShowTooltip(row)
@@ -452,19 +463,16 @@ local function ShowTooltip(row)
 	local online = Data.status[key] == "online"
 	local who = Data.LevelClass(f)
 	if who then GameTooltip:AddLine(who, 1, 1, 1) end
-	-- (1.2.1: short. Online: the zone; offline: just that, as the card already says when they were
-	-- last seen. The hint: double-click only, the right-click menu needs no telling.)
+	-- (Short, like Blizzard's: online, the zone; offline, "Last online ..." in its words; the note.)
 	if online then
 		if f.lastZone then GameTooltip:AddLine(f.lastZone, 1, 1, 1) end
 	else
-		GameTooltip:AddLine(Data.status[key] == nil and L["Checking..."] or L["Offline"], 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(Data.status[key] == nil and L["Checking..."] or Data.LastOnline(f.lastSeen), 0.6, 0.6, 0.6)
 	end
 	if f.note then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(f.note, 1, 0.82, 0, true)
 	end
-	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine(L["Double-click to whisper."], 0.5, 0.5, 0.5, true)
 	GameTooltip:Show()
 end
 
@@ -548,8 +556,9 @@ local function ShowBNetTooltip(row)
 	local far = FarReason(entry)
 	if far then GameTooltip:AddLine(far, 1, 0.3, 0.3) end
 	if entry.battleTag then GameTooltip:AddLine(L["Battle.net friend: %s"]:format(entry.battleTag), 0.51, 0.77, 1) end
-	GameTooltip:AddLine(" ")
-	local hint = L["Double-click to whisper, right-click for options."]
+	-- (1.2.3: no "double-click to whisper" hint, like Blizzard's tooltips; only where the whisper
+	-- is a Battle.net one, which isn't obvious)
+	local hint
 	if entry.otherRegion then
 		hint = L["Other region: double-click for a Battle.net whisper."]
 	elseif not ns.BattleNet.SameFaction(entry) then
@@ -557,7 +566,10 @@ local function ShowBNetTooltip(row)
 	elseif far then
 		hint = L["%s realm: double-click for a Battle.net whisper."]:format(far)
 	end
-	GameTooltip:AddLine(hint, 0.5, 0.5, 0.5, true)
+	if hint then
+		GameTooltip:AddLine(" ")
+		GameTooltip:AddLine(hint, 0.5, 0.5, 0.5, true)
+	end
 	GameTooltip:Show()
 end
 
