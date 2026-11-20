@@ -4,6 +4,15 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.4
+
+- **Fix:** in the separate window, with a friend selected, the Remove, Invite and Add buttons
+  didn't take clicks: an invisible part of the Whisper button ran over them. It now covers just
+  the Whisper button.
+- **Fix:** in the separate window, the Whisper button's highlight blinked while the mouse moved
+  over it, and could stay lit after moving on to the next button. It now lights up and goes out
+  like the other buttons.
+
 ## 1.2.3
 
 - **Fix:** moving the mouse straight onto a card's Invite button (from the right) sometimes showed

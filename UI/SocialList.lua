@@ -225,7 +225,7 @@ local function InitRow(row, elementData)
 			end
 			SetSelectedKey((selectedKey ~= self.key) and self.key or nil)
 			if selectedKey then ClearBlizzardSelection() end
-			self.armed = UI.ArmWhisper(self, UI.WhisperLinkText(self.key))
+			self.armed = UI.ArmWhisper(self, UI.WhisperLinkTarget(self.key))
 		end)
 		row:SetScript("OnDoubleClick", function(self)
 			-- (only when the link couldn't be armed: the "click the name" line in chat)

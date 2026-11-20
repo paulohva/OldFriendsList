@@ -101,23 +101,56 @@ end
 -- addon runs as the addon's code. Only the hover is ours.
 --------------------------------------------------------------------------------
 
-local LINK_PAD = (" "):rep(60)
-
--- the link around `text`, padded with spaces inside it so the whole line (or button) takes clicks;
--- centred: spaces on both sides
-local function LinkText(target, text, centred)
-	return ("|H%s|h%s%s%s|h"):format(target, centred and LINK_PAD or "", text, LINK_PAD)
+-- a player link's target ("player:Name")
+function UI.PlayerLinkTarget(name)
+	return name and ("player:" .. name) or nil
 end
 
-function UI.PlayerLinkText(name, text, centred)
-	return LinkText("player:" .. name, text or name, centred)
-end
-
--- the game's Battle.net name link (name:id:line:type:target, as the chat writes it), or nil
-function UI.BNetLinkText(entry, text, centred)
+-- the game's Battle.net name link target (name:id:line:type:target, as the chat writes it), or nil
+function UI.BNetLinkTarget(entry)
 	local name, id = entry and entry.accountName, entry and tonumber(entry.bnetAccountID)
 	if type(name) ~= "string" or not id then return nil end
-	return LinkText(("BNplayer:%s:%d:0:BN_WHISPER:%s"):format(name, id, name), text or name, centred)
+	return ("BNplayer:%s:%d:0:BN_WHISPER:%s"):format(name, id, name)
+end
+
+-- Fills `layer` with a link to `target` showing `label`: the label padded with spaces inside the
+-- link, just enough to cover the layer's width (centred: both sides), so all of the layer takes
+-- the click and nothing past it. (1.2.4: a fixed 60 spaces ran far past the separate window's
+-- Whisper button and covered Remove, Invite and Add, which then didn't take clicks.)
+-- (the same for any frame with links and one of its font strings: a link button's own text)
+function UI.FillLink(holder, fontString, target, label, centred)
+	label = label or ""
+	local width = math.floor((holder:GetWidth() or 0) - (holder.linkInset or 0))
+	-- (only when something changed: rewriting the link under the mouse made the button blink)
+	if holder.linkTarget == target and holder.linkLabel == label and holder.linkWidth == width then return end
+	holder.linkTarget, holder.linkLabel, holder.linkWidth = target, label, width
+	-- measured on a text of its own, invisible: the width of a space (between two dots) and of
+	-- the label, in the link's font
+	local measure = holder.Measure
+	if not measure then
+		measure = holder:CreateFontString(nil, "BACKGROUND")
+		measure:SetAlpha(0)
+		holder.Measure = measure
+	end
+	measure:SetFontObject(fontString:GetFontObject())
+	local font, size, flags = fontString:GetFont()
+	if font then measure:SetFont(font, size, flags) end
+	measure:SetText("..")
+	local dots = measure:GetStringWidth() or 0
+	measure:SetText("." .. (" "):rep(20) .. ".")
+	local space = ((measure:GetStringWidth() or 0) - dots) / 20
+	measure:SetText(label ~= "" and label or ".")
+	local used = label ~= "" and (measure:GetStringWidth() or 0) or 0
+	local free = width - used - 2
+	local n = 0
+	if space > 0 and free > 0 then n = math.min(200, math.floor(free / space / (centred and 2 or 1))) end
+	local pad = (" "):rep(n)
+	fontString:SetText(("|H%s|h%s%s%s|h"):format(target, centred and pad or "", label, pad))
+end
+
+-- fills a link layer (UI.CreateLinkLayer) with a link to `target`
+function UI.SetLayerLink(layer, target, label, centred)
+	UI.FillLink(layer, layer.Text, target, label, centred)
 end
 
 local linkTemplateOK
@@ -139,7 +172,12 @@ function UI.CreateLinkLayer(owner, region, fontObject, centred, hover)
 	layer:SetScript("OnHyperlinkLeave", nil)
 	if hover and owner.LockHighlight then
 		layer:SetScript("OnEnter", function() owner:LockHighlight() end)
-		layer:SetScript("OnLeave", function() owner:UnlockHighlight() end)
+		-- (left for real only: checked a frame later, when the game has the mouse's new position)
+		layer:SetScript("OnLeave", function()
+			C_Timer.After(0, function()
+				if not (owner:IsVisible() and owner:IsMouseOver()) then owner:UnlockHighlight() end
+			end)
+		end)
 	end
 	local text = layer:CreateFontString(nil, "ARTWORK", fontObject or "GameFontNormalLarge")
 	text:SetPoint(centred and "CENTER" or "LEFT")
@@ -151,19 +189,19 @@ end
 
 -- Double-click to whisper, clean: the first click (ours) lays an invisible link over the whole
 -- owner for a moment; the second click lands on it, and the game opens the whisper itself.
--- `linkText`: UI.PlayerLinkText / UI.BNetLinkText with "" as the text. False when it can't (no
--- template, or no link): the caller then does the whisper its own way.
+-- `target`: UI.WhisperLinkTarget. False when it can't (no template, or no link): the caller then
+-- does the whisper its own way.
 local ARM_TIME = 0.5   -- seconds: about a double-click
-function UI.ArmWhisper(owner, linkText)
-	if not linkText then return false end
+function UI.ArmWhisper(owner, target)
+	if not target then return false end
 	if owner.ArmLayer == nil then owner.ArmLayer = UI.CreateLinkLayer(owner, owner, nil, true) or false end
 	local layer = owner.ArmLayer
 	if not layer then return false end
 	-- (big letters: the link's spaces then fill the owner's height too, and all of it takes the click)
 	local font = layer.Text:GetFont()
 	if font then layer.Text:SetFont(font, math.max(12, math.min(64, math.floor(owner:GetHeight())))) end
-	layer.Text:SetText(linkText)
 	layer:Show()
+	UI.SetLayerLink(layer, target, "", true)
 	local armedAt = GetTime()
 	layer.armedAt = armedAt
 	C_Timer.After(ARM_TIME, function()
@@ -172,10 +210,10 @@ function UI.ArmWhisper(owner, linkText)
 	return true
 end
 
--- the invisible link for a friend (or a Battle.net friend who's only reachable through Battle.net)
-function UI.WhisperLinkText(key, bnet)
-	if bnet and not ns.BattleNet.Reachable(bnet) then return UI.BNetLinkText(bnet, "", true) end
-	return key and UI.PlayerLinkText(Data.Display(key), "", true) or nil
+-- the whisper link's target for a friend (or a Battle.net friend only reachable through Battle.net)
+function UI.WhisperLinkTarget(key, bnet)
+	if bnet and not ns.BattleNet.Reachable(bnet) then return UI.BNetLinkTarget(bnet) end
+	return key and UI.PlayerLinkTarget(Data.Display(key)) or nil
 end
 
 -- One hovered row at a time, with its highlight and tooltip, read from the mouse's position
@@ -592,11 +630,9 @@ local function OpenBNetMenu(row)
 	end)
 end
 
--- whisper the selected row: by name, or through Battle.net for the other faction / region
+-- whisper the selected row: by name, or through Battle.net for the other faction / region (the
+-- Whisper button's way only when it isn't a link button: see UpdateWhisperLink)
 local function WhisperSelected()
-	-- (a click on the button's link already opened the whisper)
-	local layer = whisperButton and whisperButton.LinkLayer
-	if layer and layer:IsShown() and layer:IsMouseOver() then return end
 	if selectedBNet and not Reachable(selectedBNet) then
 		Actions.WhisperBNet(selectedBNet)
 	elseif selectedKey then
@@ -604,25 +640,20 @@ local function WhisperSelected()
 	end
 end
 
--- the link over the Whisper button (UI.CreateLinkLayer) points at the selected friend: a click
--- opens the whisper with the game's own code. Hidden while the button is disabled.
+-- (1.2.4) The Whisper button is itself a link button (UIPanelButtonTemplate +
+-- InlineHyperlinkFrameTemplate, made in Build): its text is a link to the selected friend, so a
+-- click opens the whisper with the game's own code. Being the button itself (no layer on top),
+-- its highlight and text colour work as on any button.
 local function UpdateWhisperLink()
-	local layer = whisperButton and whisperButton.LinkLayer
-	if not layer then return end
-	local text
-	if whisperButton:IsEnabled() then
-		local label = G("WHISPER", "Whisper")
-		if selectedBNet and not Reachable(selectedBNet) then
-			text = UI.BNetLinkText(selectedBNet, label, true)
-		elseif selectedKey then
-			text = UI.PlayerLinkText(Data.Display(selectedKey), label, true)
-		end
+	if not (whisperButton and whisperButton.isLinkButton) then return end
+	local label = G("WHISPER", "Whisper")
+	local target = whisperButton:IsEnabled() and UI.WhisperLinkTarget(selectedKey, selectedBNet) or nil
+	if target then
+		UI.FillLink(whisperButton, whisperButton:GetFontString(), target, label, true)
+	else
+		whisperButton.linkTarget = nil   -- (so the next friend's link is written again)
+		whisperButton:SetText(label)
 	end
-	layer.Text:SetText(text or "")
-	layer:SetShown(text ~= nil)
-	-- (the button's own label hides under the link's, which says the same)
-	local label = whisperButton:GetFontString()
-	if label then label:SetAlpha(text and 0 or 1) end
 end
 
 local function UpdateButtons()
@@ -662,7 +693,7 @@ local function InitRow(row, elementData)
 			if button == "RightButton" then
 				if self.bnet then OpenBNetMenu(self) else OpenRowMenu(self) end
 			else
-				self.armed = UI.ArmWhisper(self, UI.WhisperLinkText(self.key, self.bnet))
+				self.armed = UI.ArmWhisper(self, UI.WhisperLinkTarget(self.key, self.bnet))
 			end
 		end)
 		row:SetScript("OnDoubleClick", function(self)
@@ -850,10 +881,32 @@ local function Build()
 
 	local add = MakeButton(frame, L["Add Friend"], 82, Actions.AddPrompt)
 	add:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 4)
-	whisperButton = MakeButton(frame, G("WHISPER", "Whisper"), 78, WhisperSelected)
+	-- (a link button: see UpdateWhisperLink; a plain one if the link template isn't there)
+	local ok, linkButton = pcall(CreateFrame, "Button", nil, frame, "UIPanelButtonTemplate, InlineHyperlinkFrameTemplate")
+	if ok and linkButton then
+		whisperButton = linkButton
+		whisperButton:SetSize(78, 22)
+		whisperButton:SetText(G("WHISPER", "Whisper"))
+		whisperButton.isLinkButton = true
+		whisperButton.linkInset = 6   -- (the button's rounded ends)
+		-- (no link tooltip; no OnClick: a click on the link is the game's, and anything of ours
+		-- on the same click would run as addon code)
+		whisperButton:SetScript("OnHyperlinkEnter", nil)
+		whisperButton:SetScript("OnHyperlinkLeave", nil)
+		-- its highlight by the mouse's position, held while it's on the button: moving over a
+		-- link's letters passes the mouse between the button and the link, and the game's own
+		-- highlight blinked with it
+		UI.PollWhileShown(frame, UI.HOVER_EVERY, function(hide)
+			local over = hide ~= "hide" and whisperButton:IsVisible() and whisperButton:IsEnabled()
+				and whisperButton:IsMouseOver() or false
+			if over == whisperButton.lit then return end
+			whisperButton.lit = over
+			if over then whisperButton:LockHighlight() else whisperButton:UnlockHighlight() end
+		end)
+	else
+		whisperButton = MakeButton(frame, G("WHISPER", "Whisper"), 78, WhisperSelected)
+	end
 	whisperButton:SetPoint("LEFT", add, "RIGHT", 2, 0)
-	-- (without the template, the button itself writes the "click the name" line in chat)
-	whisperButton.LinkLayer = UI.CreateLinkLayer(whisperButton, whisperButton, "GameFontNormal", true, true)
 	inviteButton = MakeButton(frame, G("INVITE", "Invite"), 78, function()
 		if selectedKey then Actions.Invite(selectedKey) end
 	end)
