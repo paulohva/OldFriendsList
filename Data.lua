@@ -208,7 +208,13 @@ end
 
 -- friends this character can reach: same faction and same realm type (when known). The others
 -- stay saved, and show up on a character of their faction and realm type.
+-- (1.2.0: kept between calls, read anew when the list changes: the presence check asks for it
+-- every 1.5 seconds. Don't change the table it returns.)
+local visible
+function Data.InvalidateVisible() visible = nil end
+
 function Data.Visible()
+	if visible then return visible end
 	local out = {}
 	local myFaction = Data.MyFaction()
 	for key, f in pairs(ns.db.friends) do
@@ -216,12 +222,20 @@ function Data.Visible()
 			out[#out + 1] = key
 		end
 	end
+	-- (kept only once the faction is known: until then everyone shows, read again each time)
+	if myFaction then visible = out end
 	return out
 end
 
--- Visible() sorted: online first, then by name
+-- added, removed, a note, or what a friend's realm type is: read the list again
+ns.Listen("FRIENDS_CHANGED", Data.InvalidateVisible)
+ns.Listen("DB_READY", Data.InvalidateVisible)
+ns.Listen("LOGIN", Data.InvalidateVisible)   -- (after DB_READY's own fixes to the saved list)
+
+-- Visible() sorted: online first, then by name (a new table)
 function Data.Sorted()
-	local list = Data.Visible()
+	local list = {}
+	for i, key in ipairs(Data.Visible()) do list[i] = key end
 	table.sort(list, function(a, b)
 		local oa, ob = Data.status[a] == "online", Data.status[b] == "online"
 		if oa ~= ob then return oa end

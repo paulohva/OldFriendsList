@@ -203,6 +203,25 @@ function UI.HoverTracker(area, eachRow, tooltip)
 	end
 end
 
+-- runs fn every `interval` seconds while `frame` is visible, and not at all otherwise
+-- (1.2.0: the hover check went from every frame to 20 times a second, only with the list open)
+function UI.PollWhileShown(frame, interval, fn)
+	local ticker
+	local function Start()
+		if not ticker then ticker = C_Timer.NewTicker(interval, fn) end
+	end
+	local function Stop()
+		if ticker then
+			ticker:Cancel()
+			ticker = nil
+		end
+	end
+	frame:HookScript("OnShow", Start)
+	frame:HookScript("OnHide", Stop)
+	if frame:IsVisible() then Start() end
+end
+UI.HOVER_EVERY = 0.05   -- seconds: the eye can't tell from every frame
+
 -- for /ofl diag
 function UI.LinkInfo()
 	if linkTemplateOK == nil then return "not used yet" end
@@ -249,15 +268,33 @@ function Actions.Who(key)
 end
 
 function Actions.SetNote(key)
-	StaticPopup_Show("OLDFRIENDSLIST_SET_NOTE", Data.Display(key), nil, key)
+	local f = Data.Get(key)
+	UI.ShowDialog({
+		text = L["Set a note for %s:"]:format(Data.Display(key)),
+		accept = G("ACCEPT", "Accept"), cancel = G("CANCEL", "Cancel"),
+		editText = f and f.note or "", maxLetters = 120, wide = true,
+		onAccept = function(text) Data.SetNote(key, text) end,
+	})
 end
 
 function Actions.Remove(key)
-	StaticPopup_Show("OLDFRIENDSLIST_REMOVE", Data.Display(key), nil, key)
+	UI.ShowDialog({
+		text = L["Remove %s from your Old Friends List?"]:format(Data.Display(key)),
+		accept = G("YES", "Yes"), cancel = G("NO", "No"),
+		onAccept = function()
+			Data.Remove(key)
+			if selectedKey == key then selectedKey = nil end
+		end,
+	})
 end
 
 function Actions.AddPrompt()
-	StaticPopup_Show("OLDFRIENDSLIST_ADD")
+	UI.ShowDialog({
+		text = L["Enter the first and last name of the character you want to add:"],
+		accept = G("ADD", "Add"), cancel = G("CANCEL", "Cancel"),
+		editText = "", maxLetters = 60,
+		onAccept = function(text) Actions.AddByName(text) end,
+	})
 end
 
 -- info: class, level, faction when known (e.g. from a Battle.net friend's game)
@@ -273,70 +310,100 @@ function Actions.AddByName(text, info)
 end
 
 --------------------------------------------------------------------------------
--- Popups
+-- Our own dialog (1.2.0), for Add / Note / Remove. These used Blizzard's shared popups
+-- (StaticPopup_Show): an addon showing one writes into that shared frame, and the game reuses
+-- it for protected things (release spirit, group invites, resurrects...), which then got blocked
+-- and blamed on us ("Interface action failed because of an AddOn", UNKNOWN()). This one is ours
+-- alone, with the same look (Blizzard's dark dialog border and red dialog buttons).
 --------------------------------------------------------------------------------
 
-local function EditBoxOf(dialog)
-	return dialog.editBox or dialog.EditBox or (dialog.GetEditBox and dialog:GetEditBox())
+local dialog
+
+local function DialogButton(parent, onClick)
+	local b = CreateFrame("Button", nil, parent)
+	b:SetSize(128, 21)
+	for _, part in ipairs({ { "SetNormalTexture", "Up" }, { "SetPushedTexture", "Down" },
+			{ "SetDisabledTexture", "Disabled" }, { "SetHighlightTexture", "Highlight" } }) do
+		b[part[1]](b, "Interface\\Buttons\\UI-DialogBox-Button-" .. part[2])
+	end
+	for _, get in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture" }) do
+		local t = b[get](b)
+		if t then t:SetTexCoord(0, 1, 0, 0.71875) end
+	end
+	local highlight = b:GetHighlightTexture()
+	if highlight then highlight:SetBlendMode("ADD") end
+	b:SetNormalFontObject("GameFontNormal")
+	b:SetHighlightFontObject("GameFontHighlight")
+	b:SetDisabledFontObject("GameFontDisable")
+	b:SetScript("OnClick", onClick)
+	return b
 end
 
-StaticPopupDialogs.OLDFRIENDSLIST_ADD = {
-	text = L["Enter the first and last name of the character you want to add:"],
-	button1 = G("ADD", "Add"),
-	button2 = G("CANCEL", "Cancel"),
-	hasEditBox = true,
-	maxLetters = 60,
-	OnShow = function(self)
-		local box = EditBoxOf(self)
-		if box then box:SetText("") box:SetFocus() end
-	end,
-	OnAccept = function(self)
-		local box = EditBoxOf(self)
-		if box then Actions.AddByName(box:GetText()) end
-	end,
-	EditBoxOnEnterPressed = function(box)
-		Actions.AddByName(box:GetText())
-		box:GetParent():Hide()
-	end,
-	EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
-	timeout = 0, whileDead = true, hideOnEscape = true,
-}
+local function BuildDialog()
+	local d = CreateFrame("Frame", "OldFriendsListDialog", UIParent)
+	d:SetSize(320, 100)
+	d:SetPoint("TOP", UIParent, "TOP", 0, -135)
+	d:SetFrameStrata("DIALOG")
+	d:SetToplevel(true)
+	d:EnableMouse(true)
+	-- the game's dialog look; a plain dark panel if its border template isn't there
+	local ok, border = pcall(CreateFrame, "Frame", nil, d, "DialogBorderDarkTemplate")
+	if ok and border then
+		border:SetAllPoints()
+	else
+		local bg = d:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints()
+		bg:SetColorTexture(0, 0, 0, 0.85)
+	end
 
-StaticPopupDialogs.OLDFRIENDSLIST_SET_NOTE = {
-	text = L["Set a note for %s:"],
-	button1 = G("ACCEPT", "Accept"),
-	button2 = G("CANCEL", "Cancel"),
-	hasEditBox = true,
-	maxLetters = 120,
-	editBoxWidth = 260,
-	OnShow = function(self, key)
-		local box = EditBoxOf(self)
-		local f = Data.Get(key)
-		if box then box:SetText(f and f.note or "") box:SetFocus() box:HighlightText() end
-	end,
-	OnAccept = function(self, key)
-		local box = EditBoxOf(self)
-		if box then Data.SetNote(key, box:GetText()) end
-	end,
-	EditBoxOnEnterPressed = function(box)
-		local dialog = box:GetParent()
-		Data.SetNote(dialog.data, box:GetText())
-		dialog:Hide()
-	end,
-	EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
-	timeout = 0, whileDead = true, hideOnEscape = true,
-}
+	d.Text = d:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	d.Text:SetPoint("TOP", d, "TOP", 0, -16)
+	d.Text:SetWidth(290)
 
-StaticPopupDialogs.OLDFRIENDSLIST_REMOVE = {
-	text = L["Remove %s from your Old Friends List?"],
-	button1 = G("YES", "Yes"),
-	button2 = G("NO", "No"),
-	OnAccept = function(_, key)
-		Data.Remove(key)
-		if selectedKey == key then selectedKey = nil end
-	end,
-	timeout = 0, whileDead = true, hideOnEscape = true,
-}
+	d.EditBox = CreateFrame("EditBox", nil, d, "InputBoxTemplate")
+	d.EditBox:SetSize(240, 32)
+	d.EditBox:SetPoint("TOP", d.Text, "BOTTOM", 0, -6)
+	d.EditBox:SetAutoFocus(false)
+	d.EditBox:SetScript("OnEnterPressed", function() d.Accept() end)
+	d.EditBox:SetScript("OnEscapePressed", function() d:Hide() end)
+
+	d.Button1 = DialogButton(d, function() d.Accept() end)
+	d.Button1:SetPoint("BOTTOMRIGHT", d, "BOTTOM", -6, 16)
+	d.Button2 = DialogButton(d, function() d:Hide() end)
+	d.Button2:SetPoint("BOTTOMLEFT", d, "BOTTOM", 6, 16)
+
+	-- Esc closes it, like the game's dialogs
+	tinsert(UISpecialFrames, "OldFriendsListDialog")
+	d:Hide()
+	return d
+end
+
+-- o: text, accept, cancel (button texts); editText (nil: no edit box), maxLetters, wide;
+-- onAccept(text) (text: the edit box's, when there is one)
+function UI.ShowDialog(o)
+	dialog = dialog or BuildDialog()
+	local d = dialog
+	d:Hide()
+	d.Text:SetText(o.text)
+	d.Button1:SetText(o.accept)
+	d.Button2:SetText(o.cancel)
+	local hasBox = o.editText ~= nil
+	d.EditBox:SetShown(hasBox)
+	d.EditBox:SetWidth(o.wide and 270 or 240)
+	d:SetHeight(16 + d.Text:GetStringHeight() + (hasBox and 44 or 12) + 16 + 21 + 8)
+	d.Accept = function()
+		local text = hasBox and d.EditBox:GetText() or nil
+		d:Hide()
+		o.onAccept(text)
+	end
+	d:Show()
+	if hasBox then
+		d.EditBox:SetMaxLetters(o.maxLetters or 0)
+		d.EditBox:SetText(o.editText)
+		d.EditBox:SetFocus()
+		d.EditBox:HighlightText()
+	end
+end
 
 --------------------------------------------------------------------------------
 -- Rows
@@ -745,9 +812,8 @@ local function Build()
 	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
 	listView:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, listView)
-	-- one lit row at a time (UI.HoverTracker), checked every frame while the window is open
-	local hoverPoll = CreateFrame("Frame", nil, frame)
-	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
+	-- one lit row at a time (UI.HoverTracker), checked 20 times a second while the window is open
+	UI.PollWhileShown(frame, UI.HOVER_EVERY, UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
 		function(row) if row.bnet then ShowBNetTooltip(row) else ShowTooltip(row) end end))
 
 	emptyText = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")

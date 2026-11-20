@@ -594,9 +594,8 @@ local function BuildSingleScroll()
 	section:SetPoint("TOPLEFT")
 	section:SetPoint("TOPRIGHT")
 	header = BuildHeader()
-	-- one lit card at a time (UI.HoverTracker), checked every frame while the section shows
-	local hoverPoll = CreateFrame("Frame", nil, section)
-	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(viewport, function(fn) for _, row in ipairs(rows) do fn(row) end end,
+	-- one lit card at a time (UI.HoverTracker), checked 20 times a second while the section shows
+	UI.PollWhileShown(section, UI.HOVER_EVERY, UI.HoverTracker(viewport, function(fn) for _, row in ipairs(rows) do fn(row) end end,
 		UI.ShowFriendTooltip))
 
 	-- the one scroll bar, exactly where Blizzard's own is (same offsets from the same place)
@@ -641,7 +640,6 @@ local function BuildTwoScrolls()
 	section.copyWidth = topAnchors < 2
 
 	header = BuildHeader()
-	local hoverPoll = CreateFrame("Frame", nil, section)
 
 	scrollBox = CreateFrame("Frame", nil, section, "WowScrollBoxList")
 	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
@@ -659,7 +657,7 @@ local function BuildTwoScrolls()
 	if view.SetPadding then view:SetPadding(DOT_MARGIN, 0, DOT_MARGIN, 0, ROW_SPACING) end
 	view:SetElementInitializer(ROW_TEMPLATE, InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
-	hoverPoll:SetScript("OnUpdate", UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
+	UI.PollWhileShown(section, UI.HOVER_EVERY, UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
 		UI.ShowFriendTooltip))
 
 	section:Hide()
