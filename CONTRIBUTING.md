@@ -64,14 +64,19 @@ Open an issue and include:
 
 ## Releasing (maintainers)
 
-Releases are built by the [BigWigs packager](https://github.com/BigWigsMods/packager) on GitHub
-Actions.
+Releases go out when a release PR is merged into `main` (`.github/workflows/release.yml`).
 
-1. Move the *Unreleased* changelog entries under a new version heading.
-2. Push a version tag, for example `git tag v0.2.0 && git push origin v0.2.0`.
+1. In the PR, move the *Unreleased* changelog entries under a new version heading, `## X.Y.Z`
+   (no "v").
+2. Merge the PR.
 
-The workflow builds the zip, creates a GitHub release and uploads it to CurseForge. This needs the
-`CF_API_KEY` repository secret, and the CurseForge project ID in the `.toc` (`## X-Curse-Project-ID`).
+The workflow takes the version from the first `## X.Y.Z` heading of `CHANGELOG.md`, tags
+`vX.Y.Z`, uploads `OldFriendsList-X.Y.Z.zip` to CurseForge with the
+[BigWigs packager](https://github.com/BigWigsMods/packager) (display name "Old Friends List X.Y.Z",
+that version's changelog section as the notes) and creates the GitHub release with the same zip.
+If that tag already exists, a merged PR releases nothing. It can also be run by hand from the
+Actions tab. It needs the `CF_API_KEY` repository secret and the CurseForge project ID in the
+`.toc` (`## X-Curse-Project-ID`).
 
 By contributing, you agree that your contributions are licensed under the project's
 [MIT License](LICENSE).

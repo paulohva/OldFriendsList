@@ -1,23 +1,78 @@
 name: Release
 
+# Merging a release PR into main deploys it: a tag, a GitHub release and the CurseForge upload.
+# The version is the first "## X.Y.Z" heading of CHANGELOG.md. If that version's tag already
+# exists (a PR that isn't a release), nothing happens. It can also be run by hand
+# (Actions > Release > Run workflow) for the version at the top of main's changelog.
 on:
-  push:
-    tags:
-      - "v*"
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      CF_API_KEY: ${{ secrets.CF_API_KEY }}
-      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
 
-      - name: Package and upload
+      - name: Version from the changelog
+        id: version
+        run: |
+          version=$(sed -nE 's/^## ([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$/\1/p' CHANGELOG.md | head -n 1)
+          if [ -z "$version" ]; then
+            echo "No '## X.Y.Z' heading in CHANGELOG.md: nothing to release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already released: nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Releasing $version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notes, version and tag
+        if: steps.version.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # this version's section only ("## X.Y.Z" and its bullets): the notes everywhere
+          awk -v head="## $VERSION" '$0 == head { on = 1; print; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+          # the packager sends CHANGELOG.md to CurseForge as the changelog: just this section
+          cp "$RUNNER_TEMP/notes.md" CHANGELOG.md
+          # the version in the game without the tag's "v" (as in the zips made by hand)
+          sed -i "s/@project-version@/$VERSION/g" OldFriendsList.toc
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+      # CurseForge only (no GITHUB_OAUTH: the GitHub release is made below, our way). Needs
+      # "## X-Curse-Project-ID" in the .toc and the CF_API_KEY secret; the game version
+      # (WoW Forever, 1.60.x) comes from the .toc's Interface. As uploaded by hand: file
+      # "OldFriendsList-X.Y.Z.zip", display name "Old Friends List X.Y.Z", release type
+      # Release (a vX.Y.Z tag), changelog in markdown starting "## X.Y.Z".
+      - name: Package and upload to CurseForge
+        if: steps.version.outputs.skip != 'true'
         uses: BigWigsMods/packager@v2
+        with:
+          args: -n "OldFriendsList-${{ steps.version.outputs.version }}:Old Friends List ${{ steps.version.outputs.version }}"
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+
+      - name: GitHub release
+        if: steps.version.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip=".release/OldFriendsList-$VERSION.zip"
+          ls -la "$zip"
+          { cat "$RUNNER_TEMP/notes.md"; echo; echo "### Install"; echo "Download **OldFriendsList-$VERSION.zip** below and extract it into your **_forever_/Interface/AddOns** folder."; } > "$RUNNER_TEMP/release.md"
+          gh release create "v$VERSION" "$zip" --title "Old Friends List $VERSION" --notes-file "$RUNNER_TEMP/release.md"
