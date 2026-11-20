@@ -677,7 +677,13 @@ local function Install()
 		ReadBlizzardBar()
 		if SINGLE_SCROLL then BuildSingleScroll() else BuildTwoScrolls() end
 		-- redraw when the friends tab shows, and when the search text changes
-		list:HookScript("OnShow", function() SocialList.Refresh() end)
+		-- the window opening: our group is drawn straight away (1.2.1). Through Refresh it waited
+		-- 0.1 s, and showed its state from last time for that moment (a friend still online...).
+		-- Changes while it's open still go through Refresh, gathered.
+		list:HookScript("OnShow", function()
+			local ok, err = pcall(SocialList.Layout)
+			if not ok then ns.Debug("social section: %s", tostring(err)) end
+		end)
 		-- closing the window (or leaving the friends tab) clears our selection (1.1.4)
 		list:HookScript("OnHide", function() SetSelectedKey(nil) end)
 		-- a card of Blizzard's selected: ours isn't anymore (a secure
