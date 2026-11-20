@@ -4,6 +4,17 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.1
+
+- **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked
+  from an action") could still show up in combat: opening the separate window for the first
+  time, or the first click on a friend, used something the game forbids mid-fight. Gone.
+- Opening the Social window shows the Old Friends List group up to date at once (it showed its
+  old state for a split second).
+- Shorter friend tooltips: online, the zone; offline, just "Offline" (the card already says when
+  they were last seen). And the tooltip goes away as soon as the window closes (Esc or the key),
+  like on Blizzard's cards.
+
 ## 1.2.0
 
 - **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked

@@ -131,8 +131,9 @@ function UI.CreateLinkLayer(owner, region, fontObject, centred, hover)
 	layer:SetAllPoints(region)
 	layer:SetFrameLevel(owner:GetFrameLevel() + 2)
 	layer:EnableMouse(true)
-	-- (a click on the link is the link's only: the owner under it doesn't get it too)
-	if layer.SetPropagateMouseClicks then pcall(layer.SetPropagateMouseClicks, layer, false) end
+	-- (No SetPropagateMouseClicks here: it's forbidden in combat, and building a layer then, e.g.
+	-- opening the separate window for the first time mid-fight, had the game block it and blame
+	-- us. Frames don't pass clicks to what's under them anyway.)
 	-- (the template's hover shows the link in a tooltip: not for player links)
 	layer:SetScript("OnHyperlinkEnter", nil)
 	layer:SetScript("OnHyperlinkLeave", nil)
@@ -181,11 +182,13 @@ end
 -- every frame (a link armed over a row takes the mouse from it: going by enter/leave events,
 -- rows stayed lit). `area`: the list's visible part; `eachRow(fn)`: calls fn for each row;
 -- `tooltip(row)`: shows the row's tooltip. Returns the OnUpdate function.
+-- Called with "hide" (the list closed): nothing lit, its tooltip gone at once, as Blizzard's
+-- cards do when their window closes.
 function UI.HoverTracker(area, eachRow, tooltip)
 	local current
-	return function()
+	return function(hide)
 		local found
-		if area:IsVisible() and area:IsMouseOver() then
+		if hide ~= "hide" and area:IsVisible() and area:IsMouseOver() then
 			eachRow(function(row)
 				if not found and row:IsShown() and row:IsMouseOver() then found = row end
 			end)
@@ -215,6 +218,8 @@ function UI.PollWhileShown(frame, interval, fn)
 			ticker:Cancel()
 			ticker = nil
 		end
+		-- (closed with Esc or the key: the row's tooltip goes now, not at the next mouse move)
+		fn("hide")
 	end
 	frame:HookScript("OnShow", Start)
 	frame:HookScript("OnHide", Stop)
@@ -436,21 +441,19 @@ local function ShowTooltip(row)
 	local online = Data.status[key] == "online"
 	local who = Data.LevelClass(f)
 	if who then GameTooltip:AddLine(who, 1, 1, 1) end
+	-- (1.2.1: short. Online: the zone; offline: just that, as the card already says when they were
+	-- last seen. The hint: double-click only, the right-click menu needs no telling.)
 	if online then
-		GameTooltip:AddLine(L["Online"], 0.1, 1, 0.1)
 		if f.lastZone then GameTooltip:AddLine(f.lastZone, 1, 1, 1) end
 	else
 		GameTooltip:AddLine(Data.status[key] == nil and L["Checking..."] or L["Offline"], 0.6, 0.6, 0.6)
-		local ago = Data.Ago(f.lastSeen)
-		if ago then GameTooltip:AddLine(L["Last seen %s"]:format(ago), 0.6, 0.6, 0.6) end
-		if f.lastZone then GameTooltip:AddLine(L["Last zone: %s"]:format(f.lastZone), 0.6, 0.6, 0.6) end
 	end
 	if f.note then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(f.note, 1, 0.82, 0, true)
 	end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine(L["Double-click to whisper, right-click for options."], 0.5, 0.5, 0.5, true)
+	GameTooltip:AddLine(L["Double-click to whisper."], 0.5, 0.5, 0.5, true)
 	GameTooltip:Show()
 end
 
