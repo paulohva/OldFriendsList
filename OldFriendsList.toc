@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## X-License: MIT
 ## X-Website: https://github.com/paulohva/OldFriendsList
+## X-Curse-Project-ID: 1801350
 ## SavedVariables: OldFriendsListDB
 ## IconTexture: Interface\AddOns\OldFriendsList\Media\Icon
 ## AddonCompartmentFunc: OldFriendsList_OnAddonCompartmentClick

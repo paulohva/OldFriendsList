@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.2
+
+- **Fix:** after the mouse went over a card's Invite button and back onto the card, the card's
+  tooltip didn't come back. It does now.
+
 ## 1.2.1
 
 - **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked

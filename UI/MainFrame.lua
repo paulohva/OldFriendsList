@@ -193,6 +193,17 @@ function UI.HoverTracker(area, eachRow, tooltip)
 				if not found and row:IsShown() and row:IsMouseOver() then found = row end
 			end)
 		end
+		if found and found == current then
+			-- (1.2.2) still on the same row, but its tooltip went: a button on it (Invite) showed
+			-- its own and hid it on leaving. Back on the row itself: show the row's again.
+			if not GameTooltip:IsOwned(found) then
+				local owner = GameTooltip:IsShown() and GameTooltip:GetOwner()
+				if not (owner and owner ~= found and owner.IsMouseOver and owner:IsMouseOver()) then
+					tooltip(found)
+				end
+			end
+			return
+		end
 		if found == current then return end
 		if current then
 			current:UnlockHighlight()
