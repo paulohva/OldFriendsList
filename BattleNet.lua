@@ -76,35 +76,64 @@ end
 
 -- every Battle.net friend's character online in this game, by key: in this region, and in
 -- another region (shown in the separate window only to chat with them)
+-- one Battle.net friend (by index): their characters into found / far. Returns their account id
+-- (nil when the game doesn't say)
+local function ReadAccount(i, found, far)
+	local account = Safe.Call(C_BattleNet.GetFriendAccountInfo, i)
+	if type(account) ~= "table" then return nil end
+	local function Consider(game)
+		if type(game) ~= "table" then return end
+		local where = InThisGame(game)
+		if not where then return end
+		local entry = Entry(account, game)
+		if not entry then return end
+		if where == "here" then
+			found[entry.key] = entry
+		else
+			entry.otherRegion = true
+			far[entry.key] = entry
+		end
+	end
+	-- a friend can be on several games at once: look at each of them
+	local games = Safe.Call(C_BattleNet.GetFriendNumGameAccounts, i) or 0
+	if games > 0 and C_BattleNet.GetFriendGameAccountInfo then
+		for j = 1, games do Consider(Safe.Call(C_BattleNet.GetFriendGameAccountInfo, i, j)) end
+	else
+		Consider(Safe.Value(account.gameAccountInfo))
+	end
+	return Safe.Value(account.bnetAccountID)
+end
+
 local function Read()
 	local found, far = {}, {}
 	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo) then return found, far end
 	local n = Safe.Call(BNGetNumFriends) or 0
-	for i = 1, n do
-		local account = Safe.Call(C_BattleNet.GetFriendAccountInfo, i)
-		if type(account) == "table" then
-			local function Consider(game)
-				if type(game) ~= "table" then return end
-				local where = InThisGame(game)
-				if not where then return end
-				local entry = Entry(account, game)
-				if not entry then return end
-				if where == "here" then
-					found[entry.key] = entry
-				else
-					entry.otherRegion = true
-					far[entry.key] = entry
-				end
-			end
-			-- a friend can be on several games at once: look at each of them
-			local games = Safe.Call(C_BattleNet.GetFriendNumGameAccounts, i) or 0
-			if games > 0 and C_BattleNet.GetFriendGameAccountInfo then
-				for j = 1, games do Consider(Safe.Call(C_BattleNet.GetFriendGameAccountInfo, i, j)) end
-			else
-				Consider(Safe.Value(account.gameAccountInfo))
-			end
-		end
+	for i = 1, n do ReadAccount(i, found, far) end
+	return found, far
+end
+
+-- (1.2.0) only some friends changed (BN_FRIEND_INFO_CHANGED says which, by index): read just
+-- them, and keep everyone else's characters as they were. Reading every friend each time was
+-- the addon's most expensive call. Anything unclear (an id the game doesn't give): read all.
+local function ReadChanged(indices)
+	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo) then return Read() end
+	local fresh, freshFar, changed = {}, {}, {}
+	for i in pairs(indices) do
+		local id = ReadAccount(i, fresh, freshFar)
+		if id == nil then return Read() end
+		changed[id] = true
 	end
+	local found, far = {}, {}
+	for key, e in pairs(online) do
+		if e.bnetAccountID == nil then return Read() end
+		if not changed[e.bnetAccountID] then found[key] = e end
+	end
+	for key, e in pairs(elsewhere) do
+		if e.bnetAccountID == nil then return Read() end
+		if not changed[e.bnetAccountID] then far[key] = e end
+	end
+	for key, e in pairs(fresh) do found[key] = e end
+	for key, e in pairs(freshFar) do far[key] = e end
 	return found, far
 end
 
@@ -112,13 +141,20 @@ end
 -- "has come online" for everyone at once
 local primed
 
-local function Update()
+-- `indices`: only these friends changed (see ReadChanged); nil: read every friend
+local function Update(indices)
 	-- Battle.net not connected: the list reads empty, which isn't everyone logging off
 	if Safe.Call(BNConnected) == false then
 		primed = false
 		return
 	end
-	local ok, found, far = pcall(Read)
+	-- (the first read after login or a reconnection is always a full one)
+	local ok, found, far
+	if indices and primed then
+		ok, found, far = pcall(ReadChanged, indices)
+	else
+		ok, found, far = pcall(Read)
+	end
 	if not ok then
 		ns.Debug("battle.net: %s", tostring(found))
 		return
@@ -162,23 +198,30 @@ local function Update()
 	ns.Fire("BNET_CHANGED")
 end
 
-local queued
-local function UpdateSoon()
+-- changes are gathered for a moment, then read once: every friend, or only the ones that changed
+local function UpdateAll() Update(nil) end
+local UpdateSome = Update
+local queued, readAll, dirty = false, false, {}
+local function UpdateSoon(index)
+	if type(index) == "number" then dirty[index] = true else readAll = true end
 	if queued then return end
 	queued = true
 	C_Timer.After(UPDATE_DELAY, function()
-		queued = nil
-		Update()
+		local all, some = readAll, dirty
+		queued, readAll, dirty = false, false, {}
+		if all or not next(some) then UpdateAll() else UpdateSome(some) end
 	end)
 end
 
+-- one friend's info changed: the event says which (by index), or nothing (then: everyone)
+ns.On("BN_FRIEND_INFO_CHANGED", function(index) UpdateSoon(index) end)
 for _, event in ipairs({
-	"BN_FRIEND_INFO_CHANGED", "BN_FRIEND_ACCOUNT_ONLINE", "BN_FRIEND_ACCOUNT_OFFLINE",
-	"BN_FRIEND_LIST_SIZE_CHANGED", "BN_CONNECTED", "BN_DISCONNECTED", "PLAYER_ENTERING_WORLD",
+	"BN_FRIEND_ACCOUNT_ONLINE", "BN_FRIEND_ACCOUNT_OFFLINE", "BN_FRIEND_LIST_SIZE_CHANGED",
+	"BN_CONNECTED", "BN_DISCONNECTED", "PLAYER_ENTERING_WORLD",
 }) do
-	ns.On(event, UpdateSoon)
+	ns.On(event, function() UpdateSoon() end)
 end
-ns.Listen("LOGIN", UpdateSoon)
+ns.Listen("LOGIN", function() UpdateSoon() end)
 -- a friend added to the list may already be on Battle.net
 ns.Listen("FRIENDS_CHANGED", function(_, what) if what == "added" then UpdateSoon() end end)
 

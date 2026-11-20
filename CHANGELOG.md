@@ -4,6 +4,19 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.0
+
+- **Fix:** "Interface action failed because of an AddOn" (or "OldFriendsList has been blocked
+  from an action") could show up after adding, removing or noting a friend, for instance later
+  when releasing your spirit or answering a group invite. The Add, Note and Remove dialogs used
+  the game's shared dialog boxes, which the game reuses for those; Old Friends List now has its
+  own, with the same look.
+- **Lighter:** the friend checks every few seconds no longer rebuild the list each time, and a
+  Battle.net friend's change now reads only that friend instead of all of them (that read was
+  the addon's most expensive one). With the Social window or the separate window open, the
+  mouse-over highlight is checked 20 times a second instead of every frame. Old Friends List was
+  already light; now it's lighter.
+
 ## 1.1.4
 
 - In the Social window, only one card is selected at a time: selecting an Old Friends List card
