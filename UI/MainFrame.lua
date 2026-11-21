@@ -287,6 +287,38 @@ function UI.PollWhileShown(frame, interval, fn)
 end
 UI.HOVER_EVERY = 0.05   -- seconds: the eye can't tell from every frame
 
+-- (1.2.5) A link button (UIPanelButtonTemplate + InlineHyperlinkFrameTemplate) doesn't sink when
+-- clicked: the click goes to its link, and the template's OnMouseDown / OnMouseUp, which swap the
+-- textures, don't run. While the mouse is on it (`watch`), it reads the left button every frame
+-- and sinks or rises with the template's own functions, like any button: a press that began on
+-- it, until the button goes up or the mouse leaves. Looks only: the click stays the game's.
+-- (the button's own pushed state too, held while sunk: the game then moves its text down a little,
+-- as on the other buttons; the textures alone left the text where it was)
+local function PressSunk(button, sunk)
+	if sunk == button.sunk then return end
+	button.sunk = sunk
+	if sunk then button:SetButtonState("PUSHED", true) else button:SetButtonState("NORMAL") end
+	local fn = sunk and UIPanelButton_OnMouseDown or UIPanelButton_OnMouseUp
+	if fn then fn(button) end
+end
+
+function UI.WatchPress(button, watch)
+	if not watch then
+		button:SetScript("OnUpdate", nil)
+		PressSunk(button, false)
+		return
+	end
+	button.wasDown = IsMouseButtonDown("LeftButton")   -- (held from elsewhere: not a press here)
+	button.pressedHere = false
+	button:SetScript("OnUpdate", function(self)
+		local down = IsMouseButtonDown("LeftButton")
+		if down and not self.wasDown then self.pressedHere = true end
+		if not down then self.pressedHere = false end
+		self.wasDown = down
+		PressSunk(self, down and self.pressedHere and self:IsEnabled() and self:IsMouseOver() or false)
+	end)
+end
+
 -- for /ofl diag
 function UI.LinkInfo()
 	if linkTemplateOK == nil then return "not used yet" end
@@ -902,6 +934,7 @@ local function Build()
 			if over == whisperButton.lit then return end
 			whisperButton.lit = over
 			if over then whisperButton:LockHighlight() else whisperButton:UnlockHighlight() end
+			UI.WatchPress(whisperButton, over)
 		end)
 	else
 		whisperButton = MakeButton(frame, G("WHISPER", "Whisper"), 78, WhisperSelected)

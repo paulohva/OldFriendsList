@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.5
+
+- **Fix:** in the separate window, the Whisper button didn't sink when clicked. It now presses
+  down like the other buttons.
+
 ## 1.2.4
 
 - **Fix:** in the separate window, with a friend selected, the Remove, Invite and Add buttons
