@@ -88,7 +88,7 @@ function Mail.OnAutoComplete(parent, text, cursorPosition)
 	local merged = Mail.Merge(GameResults(parent, text, cursorPosition or #text, max), text, max)
 	if not merged then return end
 	local ok, err = pcall(AutoComplete_UpdateResults, AutoCompleteBox, merged)
-	if not ok then ns.Debug("mail names: %s", tostring(err)) end
+	if not ok then ns.QuietError("mail names", err) end
 end
 
 ns.Listen("LOGIN", function()
