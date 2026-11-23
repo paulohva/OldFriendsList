@@ -116,6 +116,9 @@ if locale == "ptBR" then
 		"Não foi possível adicionar seus amigos à janela de amigos; usando a janela separada."
 	L["The game blocked an action (%s). Please report it with the output of /ofl diag."] =
 		"O jogo bloqueou uma ação (%s). Por favor, reporte com o resultado de /ofl diag."
+	-- controller mode (1.2.6)
+	L["Controller mode: type /reload to see Old Friends List in the Social window."] =
+		"Modo controle: digite /reload para ver a Old Friends List na janela de amigos."
 	L["Invite to group"] = "Convidar para o grupo"
 	L["Already in your group."] = "Já está no seu grupo."
 	L["Only the group leader can invite."] = "Só o líder do grupo pode convidar."
@@ -222,6 +225,13 @@ if locale == "ptBR" then
 	L["check one character now and print the result"] = "verifica um personagem agora e mostra o resultado"
 	L["check which game APIs this client has"] = "verifica quais APIs do jogo este cliente tem"
 	L["toggle debug messages"] = "liga ou desliga as mensagens de depuração"
+	L["error mode for bug reports: the game's taint log and Lua errors on screen (again to turn off)"] =
+		"modo de erros para relatar bugs: registro de taint do jogo e erros Lua na tela (de novo para desligar)"
+	L["Error mode is on: taint log level %s, Lua errors on screen. Type /ofl errors again to turn it off."] =
+		"Modo de erros ligado: registro de taint nível %s, erros Lua na tela. Digite /ofl errors de novo para desligar."
+	L["Error mode is off."] = "Modo de erros desligado."
+	L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."] =
+		"O jogo não aceitou a configuração do registro de taint (agora %s). Use /console taintLog 2."
 	L["<seconds>"] = "<segundos>"
 	L["<text>"] = "<texto>"
 	L["on"] = "ligado"

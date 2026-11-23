@@ -901,6 +901,11 @@ local function Build()
 	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
 	listView:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, listView)
+	-- (1.2.6) the controller's cursor reads the scroll boxes it moves through, and ours taints it
+	-- ("Interface action failed because of an AddOn"): it skips the list (only with the controller
+	-- interface on; the buttons below stay reachable). See ns.HideFromController.
+	ns.HideFromController(scrollBox)
+	ns.HideFromController(scrollBar)
 	-- one lit row at a time (UI.HoverTracker), checked 20 times a second while the window is open
 	UI.PollWhileShown(frame, UI.HOVER_EVERY, UI.HoverTracker(scrollBox, function(fn) scrollBox:ForEachFrame(fn) end,
 		function(row) if row.bnet then ShowBNetTooltip(row) else ShowTooltip(row) end end))
@@ -952,6 +957,7 @@ local function Build()
 	-- keep the "last seen" times fresh while open
 	local ticker
 	frame:SetScript("OnShow", function()
+		ns.ApplyControllerHiding()   -- (the controller interface may have been turned on since)
 		UI.Refresh()
 		ticker = C_Timer.NewTicker(30, UI.Refresh)
 		if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_OPEN then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN) end

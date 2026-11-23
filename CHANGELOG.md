@@ -4,6 +4,21 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.2.6
+
+- **Fix:** with a controller, moving the cursor in the Social window (O) could show "Interface
+  action failed because of an AddOn" and stop at the Old Friends List group. With the game's
+  controller interface on, Blizzard's list now stays in its own scroll, and the controller's
+  cursor moves through the Old Friends List cards too: select a friend, or open their menu to
+  whisper or invite. In the separate window the cursor skips the list and goes to the buttons.
+  With mouse and keyboard nothing changes.
+- `/ofl diag` is easier to read: the setup (where your list is shown, controller interface on or
+  off), status sources and missing game APIs, and the problems last. It also counts the game's
+  "action failed" messages (and where they came from) and this addon's script errors.
+- New `/ofl errors`, for bug reports: turns on the game's taint log and its Lua errors on screen
+  (typed again, turns them off and puts Lua errors back as they were). It stays on at each login
+  until turned off, and says so once in chat.
+
 ## 1.2.5
 
 - **Fix:** in the separate window, the Whisper button didn't sink when clicked. It now presses

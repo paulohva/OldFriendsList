@@ -51,6 +51,7 @@ local function Advanced()
 	Line("ping " .. NAME, L["check one character now and print the result"])
 	Line("diag", L["check which game APIs this client has"])
 	Line("debug", L["toggle debug messages"])
+	Line("errors", L["error mode for bug reports: the game's taint log and Lua errors on screen (again to turn off)"])
 end
 
 local function Config()
@@ -87,57 +88,118 @@ local function List()
 	end
 end
 
-local function Diag()
-	local function has(label, v) print(("  %s: %s"):format(label, v and "|cff20ff20yes|r" or "|cffff4040no|r")) end
-	ns.Print("API check (%s, interface %s, locale %s):", ns.NAME, tostring(select(4, GetBuildInfo())), tostring(GetLocale()))
-	has("C_ChatInfo.SendAddonMessage", C_ChatInfo and C_ChatInfo.SendAddonMessage)
-	has("chat message filter", (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter)
-	has("ERR_CHAT_PLAYER_NOT_FOUND_S", ERR_CHAT_PLAYER_NOT_FOUND_S)
-	has("send tell", (ChatFrameUtil and ChatFrameUtil.SendTell) or ChatFrame_SendTell)
-	has("C_PartyInfo.InviteUnit", C_PartyInfo and C_PartyInfo.InviteUnit)
-	has("Menu.ModifyMenu", Menu and Menu.ModifyMenu)
-	has("MenuUtil.CreateContextMenu", MenuUtil and MenuUtil.CreateContextMenu)
-	has("C_FriendList.SendWho", C_FriendList and C_FriendList.SendWho)
-	has("C_FriendList.AddFriend (character friends)", C_FriendList and C_FriendList.AddFriend)
-	has("SOUNDKIT.UI_BNET_TOAST", SOUNDKIT and SOUNDKIT.UI_BNET_TOAST)
-	has("secret values (issecretvalue)", issecretvalue)
-	-- how this client spells names (Forever: "First Last", maybe with a realm)
-	for _, unit in ipairs({ "player", "target" }) do
-		if UnitExists(unit) and UnitIsPlayer(unit) then
-			local n1 = ns.Safe.Call(UnitName, unit)
-			local n2, r2 = ns.Safe.CallAll(UnitFullName, unit)
-			print(("  %s: UnitName=%q UnitFullName=%q,%q -> key %q"):format(unit, tostring(n1), tostring(n2), tostring(r2),
-				tostring(Data.KeyFromUnit(unit))))
-		end
-	end
-	-- where a group member is, by each source
-	if UnitExists("party1") then
-		local key = Data.KeyFromUnit("party1")
-		print(("  party1 %s: roster zone %q, map zone %q"):format(tostring(key),
-			tostring(key and Presence.RosterZone(key)), tostring(Presence.MapZone("party1"))))
-	end
-	for _, line in ipairs(UI.SocialIconInfo()) do print("  " .. line) end
-	print("  " .. ns.SocialList.Info())
-	print("  " .. ns.Guild.Info())
-	print("  " .. ns.BattleNet.Info())
-	print("  O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
-	local can, why = ns.Comm.CanSend()
-	print("  can send addon messages now: " .. (can and "|cff20ff20yes|r" or ("|cffff4040no|r (" .. tostring(why) .. ")")))
+-- /ofl diag: for bug reports, in sections: how the addon is set up, what it can see, the game APIs
+-- (only the missing ones named), and last the problems (what people usually need to send).
+local GREEN, RED, YELLOW = "|cff20ff20", "|cffff4040", "|cffffd100"
+local function Good(text) return GREEN .. text .. "|r" end
+local function Bad(text) return RED .. text .. "|r" end
+local function Section(title) print(YELLOW .. title .. "|r") end
+local function Item(label, value) print(("  %s: %s"):format(label, value)) end
+
+local function AddonVersion()
+	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+	if not get then return "?" end
+	local ok, v = pcall(get, "OldFriendsList", "Version")
+	return ok and v or "?"
+end
+
+-- the problems section: last, so it's what shows at the bottom of the chat (easy to screenshot)
+local function Problems()
+	Section("Problems")
+	-- first: is the game recording what this diag can't see (taint log, Lua errors on screen)?
+	Item("error mode (/ofl errors)", ("%s - taint log level %s, Lua errors on screen %s"):format(
+		OnOff(ns.db.settings.errorMode), tostring(ns.TaintLogLevel()), ns.ScriptErrorsShown() and "yes" or "no"))
 	-- actions the game blocked and blamed on this addon, this session
 	local blocked = {}
 	for func, b in pairs(ns.blocked) do
 		blocked[#blocked + 1] = ("%s (%s, %dx, last %s)"):format(func, b.event, b.count, b.last)
 	end
 	table.sort(blocked)
-	print("  blocked actions this session: " .. (#blocked > 0 and ("|cffff4040" .. table.concat(blocked, "; ") .. "|r") or "|cff20ff20none|r"))
+	Item("blocked actions this session", #blocked > 0 and Bad(table.concat(blocked, "; ")) or Good("none"))
+	-- "Interface action failed because of an AddOn" shown by Blizzard's own code (any addon)
+	local m = ns.actionMessages
+	if ns.ActionMessagesWatched() then
+		Item("\"action failed\" messages (any addon)", m.count > 0
+			and Bad(("%dx, last %s, from %s"):format(m.count, tostring(m.last), tostring(m.from or "?"))) or Good("none"))
+	else
+		Item("\"action failed\" messages (any addon)", GREY .. "can't be counted on this client|r")
+	end
+	-- script errors in this addon's own code, this session
+	local e = ns.scriptErrors
+	Item("script errors (this addon)", e.count > 0
+		and Bad(("%dx, last %s: %s"):format(e.count, tostring(e.last), tostring(e.message))) or Good("none"))
 	-- the chat's globals: tainted ones make Blizzard's Social window fail (SearchFriends blocked)
 	local tainted = {}
 	for _, name in ipairs({ "ACTIVE_CHAT_EDIT_BOX", "LAST_ACTIVE_CHAT_EDIT_BOX", "CHAT_FOCUS_OVERRIDE" }) do
 		local secure, by = issecurevariable(name)
 		if not secure then tainted[#tainted + 1] = ("%s (%s)"):format(name, tostring(by)) end
 	end
-	print("  chat: " .. (#tainted > 0 and ("|cffff4040tainted: " .. table.concat(tainted, ", ") .. "|r") or "|cff20ff20clean|r")
-		.. "  [name links: " .. ns.UI.LinkInfo() .. "]")
+	Item("chat", #tainted > 0 and Bad("tainted: " .. table.concat(tainted, ", ")) or Good("clean"))
+end
+
+local function Diag()
+	ns.Print("diag: version %s, interface %s, locale %s, %s", tostring(AddonVersion()),
+		tostring(select(4, GetBuildInfo())), tostring(GetLocale()), date("%Y-%m-%d %H:%M"))
+
+	Section("Setup")
+	local s = ns.db.settings
+	local mode = s.socialMode == "integrated" and "in the Social window"
+		or s.socialMode == "separate" and "separate window" or tostring(s.socialMode)
+	Item("list shown", mode .. (s.setupDone == false and " (setup not done yet)" or ""))
+	Item("Social window", ns.SocialList.Info())
+	local hidden, toHide = ns.ControllerHiddenCount()
+	Item("controller interface", ns.GamepadUI()
+		and ("on, %d of %d lists kept out of the controller's cursor"):format(hidden, toHide) or "off")
+	Item("keys", "O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
+	Item("name links", ns.UI.LinkInfo())
+	Item("debug", OnOff(s.debug))
+	for _, line in ipairs(UI.SocialIconInfo()) do Item("tab", line) end
+
+	Section("Status sources")
+	local can, why = ns.Comm.CanSend()
+	Item("addon messages now", can and Good("yes") or Bad("no") .. " (" .. tostring(why) .. ")")
+	Item("checks", Presence.PausedReason() and ("paused: " .. tostring(Presence.PausedReason())) or "running")
+	print("  " .. ns.Guild.Info())
+	print("  " .. ns.BattleNet.Info())
+	-- how this client spells names (Forever: "First Last", maybe with a realm)
+	for _, unit in ipairs({ "player", "target" }) do
+		if UnitExists(unit) and UnitIsPlayer(unit) then
+			local n1 = ns.Safe.Call(UnitName, unit)
+			local n2, r2 = ns.Safe.CallAll(UnitFullName, unit)
+			Item(unit, ("UnitName=%q UnitFullName=%q,%q -> key %q"):format(tostring(n1), tostring(n2), tostring(r2),
+				tostring(Data.KeyFromUnit(unit))))
+		end
+	end
+	-- where a group member is, by each source
+	if UnitExists("party1") then
+		local key = Data.KeyFromUnit("party1")
+		Item("party1", ("%s: roster zone %q, map zone %q"):format(tostring(key),
+			tostring(key and Presence.RosterZone(key)), tostring(Presence.MapZone("party1"))))
+	end
+
+	Section("Game APIs")
+	local apis = {
+		{ "C_ChatInfo.SendAddonMessage", C_ChatInfo and C_ChatInfo.SendAddonMessage },
+		{ "chat message filter", (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter },
+		{ "ERR_CHAT_PLAYER_NOT_FOUND_S", ERR_CHAT_PLAYER_NOT_FOUND_S },
+		{ "send tell", (ChatFrameUtil and ChatFrameUtil.SendTell) or ChatFrame_SendTell },
+		{ "C_PartyInfo.InviteUnit", C_PartyInfo and C_PartyInfo.InviteUnit },
+		{ "Menu.ModifyMenu", Menu and Menu.ModifyMenu },
+		{ "MenuUtil.CreateContextMenu", MenuUtil and MenuUtil.CreateContextMenu },
+		{ "C_FriendList.SendWho", C_FriendList and C_FriendList.SendWho },
+		{ "C_FriendList.AddFriend (character friends)", C_FriendList and C_FriendList.AddFriend },
+		{ "SOUNDKIT.UI_BNET_TOAST", SOUNDKIT and SOUNDKIT.UI_BNET_TOAST },
+		{ "secret values (issecretvalue)", issecretvalue },
+		{ "controller navigation (SmartNavigation_MarkFrameIgnored)", SmartNavigation_MarkFrameIgnored },
+	}
+	local missing = {}
+	for _, api in ipairs(apis) do
+		if not api[2] then missing[#missing + 1] = api[1] end
+	end
+	Item("checked", #apis)
+	Item("missing", #missing > 0 and Bad(table.concat(missing, ", ")) or Good("none"))
+
+	Problems()
 end
 
 local function SetToggle(field, label, arg)
@@ -193,6 +255,23 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		if not ns.db.settings.minimapHidden then ns.Print(L["Minimap button shown."]) end
 	elseif cmd == "debug" then
 		SetToggle("debug", "debug", rest)
+	elseif cmd == "errors" then
+		local arg = rest:lower()
+		local on
+		if arg == "on" then on = true
+		elseif arg == "off" then on = false
+		else on = not ns.db.settings.errorMode end
+		local took = ns.SetErrorMode(on)
+		if on then
+			ns.Print(L["Error mode is on: taint log level %s, Lua errors on screen. Type /ofl errors again to turn it off."],
+				tostring(ns.TaintLogLevel()))
+			if not took then
+				ns.Print(L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."],
+					tostring(ns.TaintLogLevel()))
+			end
+		else
+			ns.Print(L["Error mode is off."])
+		end
 	elseif cmd == "interval" then
 		local n = tonumber(rest)
 		if not n or n < 15 or n > 300 then ns.Print(L["The interval must be 15 to 300 seconds."]) return end

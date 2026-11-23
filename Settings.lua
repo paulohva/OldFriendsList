@@ -264,7 +264,7 @@ local function Build()
 	-- each piece on its own, so one API difference doesn't take the whole panel down
 	local function Try(fn, ...)
 		local ok, err = pcall(fn, ...)
-		if not ok then ns.Debug("settings: %s", tostring(err)) end
+		if not ok then ns.QuietError("settings", err) end
 	end
 
 	Try(AddHeader, layout, L["General"])

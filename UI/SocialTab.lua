@@ -219,7 +219,7 @@ local function Refresh(social)
 		if ok and b then
 			buttons[social], kinds[social] = b, "tab"
 		else
-			if not ok then ns.Debug("social tab: %s", tostring(b)) end
+			if not ok then ns.QuietError("social tab", b) end
 			buttons[social], kinds[social] = BuildIcon(social), "icon"
 		end
 	end

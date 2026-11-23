@@ -25,12 +25,24 @@ local SocialList = {}
 ns.SocialList = SocialList
 
 local SINGLE_SCROLL = true
+-- (1.2.6) The layout, chosen once when the section is built: one scroll, unless the game's
+-- controller interface is on. The controller's cursor reads the scroll boxes it moves through,
+-- and with one scroll Blizzard's list sits inside ours, made by this addon: that tainted the
+-- cursor ("Interface action failed because of an AddOn"). With the controller, the two-scroll
+-- layout leaves Blizzard's list where it is, and our group is kept out of the cursor's way
+-- (ns.HideFromController). nil until built.
+local single
 
 local ROW_TEMPLATE = "OldFriendsListSocialRowTemplate"
 local ROW_HEIGHT, ROW_SPACING = 58, 3
 local HEADER_HEIGHT = 24
 -- two scrolls: more friends than this and the group scrolls on its own; one scroll: all of them
-local MAX_ROWS = SINGLE_SCROLL and math.huge or 4
+local TWO_SCROLL_ROWS = 4
+local function MaxRows()
+	local one = single
+	if one == nil then one = SINGLE_SCROLL end
+	return one and math.huge or TWO_SCROLL_ROWS
+end
 local PAN_EXTENT = 36              -- one mouse wheel step in the single scroll (about Blizzard's)
 local PAD_LEFT, PAD_RIGHT, PAD_TOP = 10, 7, 10
 -- below our last card: nothing more. Blizzard's list starts with its own padding, which already
@@ -273,7 +285,7 @@ end
 -- hidden, unless keepHeader: an empty list still shows its header, with the "+" to add the first one
 function SocialList.SectionHeight(n, collapsed, keepHeader)
 	if n == 0 and not keepHeader then return 0 end
-	local rows = collapsed and 0 or math.min(n, MAX_ROWS)
+	local rows = collapsed and 0 or math.min(n, MaxRows())
 	-- header gap + the cards with the spacing between them (none after the last one)
 	local body = rows > 0 and (HEADER_GAP + rows * (ROW_HEIGHT + ROW_SPACING) - ROW_SPACING) or 0
 	return PAD_TOP + HEADER_HEIGHT + body + (rows > 0 and END_GAP or COLLAPSED_END_GAP)
@@ -312,8 +324,8 @@ local function LayoutTwoScrolls()
 	SetCollapseIcon(collapsed)
 	UI.UpdateStale(header.Stale)
 
-	local rows = collapsed and 0 or math.min(#keys, MAX_ROWS)
-	local scrolls = rows > 0 and #keys > MAX_ROWS
+	local rows = collapsed and 0 or math.min(#keys, MaxRows())
+	local scrolls = rows > 0 and #keys > MaxRows()
 	scrollBox:SetShown(rows > 0)
 	scrollBar:SetShown(scrolls)
 	-- full width like Blizzard's cards (our scroll bar sits to their right, like Blizzard's)
@@ -395,7 +407,7 @@ local function SyncSoon()
 	C_Timer.After(0, function()
 		syncQueued = nil
 		local ok, err = pcall(SyncHeights)
-		if not ok then ns.Debug("social section: %s", tostring(err)) end
+		if not ok then ns.QuietError("social section", err) end
 	end)
 end
 
@@ -485,11 +497,103 @@ local function LayoutSingleScroll()
 	SyncHeights()
 end
 
+--------------------------------------------------------------------------------
+-- Controller layout (1.2.6, NATIVE_NAV): the two-scroll layout, but our cards are plain buttons in
+-- a native ScrollFrame instead of a ScrollBox. The controller's cursor moves through a ScrollFrame
+-- with engine calls only (its position, GetVerticalScroll / SetVerticalScroll): nothing this addon
+-- wrote is read, so it stays clean and can reach our cards. (Through a ScrollBox it reads the
+-- box's Lua state, written by us, and got tainted.)
+--------------------------------------------------------------------------------
+
+local NATIVE_NAV = true
+local navScroll, navContent    -- controller layout: the native scroll frame and what it scrolls
+
+local function LayoutControllerList()
+	if not SocialList.Enabled() then
+		section:Hide()
+		MoveBlizzardList(0)
+		return
+	end
+	local search = SearchText()
+	local keys, online = SocialList.Keys(search)
+	local collapsed = ns.db.settings.socialCollapsed and true or false
+	local height = SocialList.SectionHeight(#keys, collapsed, search == "")
+	if height == 0 then
+		section:Hide()
+		MoveBlizzardList(0)
+		return
+	end
+
+	local text = L["Old Friends List %d/%d"]:format(online, #keys)
+	if header.SetText then header:SetText(text) end
+	if header.ButtonText then header.ButtonText:SetText(text) end
+	SetCollapseIcon(collapsed)
+	UI.UpdateStale(header.Stale)
+
+	local shown = collapsed and 0 or #keys
+	local visible = math.min(shown, TWO_SCROLL_ROWS)
+	local step = ROW_HEIGHT + ROW_SPACING
+	navScroll:SetShown(visible > 0)
+	if visible > 0 then
+		navScroll:SetHeight(DOT_MARGIN + visible * step)
+		local width = navScroll:GetWidth()
+		if width and width > 0 then navContent:SetWidth(width) end
+		navContent:SetHeight(DOT_MARGIN + shown * step)
+	end
+	for i = 1, shown do
+		local row = rows[i]
+		if not row then
+			row = CreateFrame("Button", nil, navContent, ROW_TEMPLATE)
+			rows[i] = row
+		end
+		local y = -(DOT_MARGIN + (i - 1) * step)
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", navContent, "TOPLEFT", DOT_MARGIN, y)
+		row:SetPoint("TOPRIGHT", navContent, "TOPRIGHT", 0, y)
+		row:SetHeight(ROW_HEIGHT)
+		InitRow(row, { key = keys[i] })
+		row:Show()
+	end
+	for i = shown + 1, #rows do rows[i]:Hide() end
+	-- (fewer friends than before: don't stay scrolled past the end)
+	local range = navScroll:GetVerticalScrollRange() or 0
+	if navScroll:GetVerticalScroll() > range then navScroll:SetVerticalScroll(range) end
+
+	if section.copyWidth then
+		local width = list.ScrollBox:GetWidth()
+		if width and width > 0 then section:SetWidth(width) end
+	end
+	section:SetHeight(height)
+	section:Show()
+	MoveBlizzardList(height)
+end
+
+-- The controller interface was turned on after the one-scroll layout was built: Blizzard's list
+-- goes back exactly where it was and our group stays hidden in the Social window until a /reload
+-- builds the controller's layout (said once in chat). Off again: back to normal.
+local controllerSaid
+local function ControllerWaits()
+	return single and ns.GamepadUI() or false
+end
+
 -- redraws our group and fits Blizzard's list around it
 function SocialList.Layout()
 	if not (installed and section) then return end
-	if SINGLE_SCROLL then LayoutSingleScroll() else LayoutTwoScrolls() end
+	ns.ApplyControllerHiding()
+	if ControllerWaits() then
+		Disengage()   -- (nothing if it's already out; in a fight, again when it ends)
+		section:Hide()
+		if SocialList.Enabled() and not controllerSaid then
+			controllerSaid = true
+			ns.Print(L["Controller mode: type /reload to see Old Friends List in the Social window."])
+		end
+		return
+	end
+	if single then LayoutSingleScroll()
+	elseif navScroll then LayoutControllerList()
+	else LayoutTwoScrolls() end
 end
+ns.Listen("CONTROLLER_CHANGED", function() SocialList.Refresh() end)
 
 -- our data changed, or the mode was flipped
 local layoutQueued
@@ -499,7 +603,7 @@ function SocialList.Refresh()
 	C_Timer.After(0.1, function()
 		layoutQueued = nil
 		local ok, err = pcall(SocialList.Layout)
-		if not ok then ns.Debug("social section: %s", tostring(err)) end
+		if not ok then ns.QuietError("social section", err) end
 	end)
 end
 
@@ -663,6 +767,46 @@ local function BuildTwoScrolls()
 	section:Hide()
 end
 
+-- the controller layout (NATIVE_NAV): like two scrolls, our cards in a native scroll frame
+local function BuildControllerList()
+	section = CreateFrame("Frame", nil, list)
+	section:SetFrameLevel(list.ScrollBox:GetFrameLevel() + 1)
+	local topAnchors = 0
+	for _, p in ipairs(saved[list.ScrollBox]) do
+		if p[1]:find("TOP") then
+			section:SetPoint(p[1], p[2], p[3], p[4], p[5])
+			topAnchors = topAnchors + 1
+		end
+	end
+	section.copyWidth = topAnchors < 2
+
+	header = BuildHeader()
+
+	-- (an inner margin so the status dots, which sit on the cards' corner, aren't clipped)
+	navScroll = CreateFrame("ScrollFrame", nil, section)
+	navScroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", -DOT_MARGIN, DOT_MARGIN - HEADER_GAP)
+	navScroll:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, DOT_MARGIN - HEADER_GAP)
+	navScroll:SetHeight(1)
+	navContent = CreateFrame("Frame", nil, navScroll)
+	navContent:SetSize(1, 1)
+	navScroll:SetScrollChild(navContent)
+	-- (the cards take the scroll frame's width, also when it only gets one after the first layout)
+	navScroll:SetScript("OnSizeChanged", function(_, width)
+		if width and width > 0 then navContent:SetWidth(width) end
+	end)
+	-- the mouse wheel, one card at a time
+	navScroll:EnableMouseWheel(true)
+	navScroll:SetScript("OnMouseWheel", function(self, delta)
+		local range = self:GetVerticalScrollRange() or 0
+		local y = math.max(0, math.min(range, self:GetVerticalScroll() - delta * (ROW_HEIGHT + ROW_SPACING)))
+		self:SetVerticalScroll(y)
+	end)
+	UI.PollWhileShown(section, UI.HOVER_EVERY, UI.HoverTracker(navScroll, function(fn) for _, row in ipairs(rows) do fn(row) end end,
+		UI.ShowFriendTooltip))
+
+	section:Hide()
+end
+
 local function Install()
 	if installed or failed then return end
 	local social = _G["SocialUIFrame"]
@@ -675,14 +819,24 @@ local function Install()
 		SaveAnchors(list.ScrollBar)
 		assert(#saved[list.ScrollBox] > 0, "the friends list has no anchors")
 		ReadBlizzardBar()
-		if SINGLE_SCROLL then BuildSingleScroll() else BuildTwoScrolls() end
+		single = SINGLE_SCROLL and not ns.GamepadUI()
+		if single then
+			BuildSingleScroll()
+		elseif NATIVE_NAV and ns.GamepadUI() then
+			-- (the controller's cursor can reach our cards: see LayoutControllerList)
+			BuildControllerList()
+		else
+			BuildTwoScrolls()
+			-- (the controller's cursor skips our group: see `single`)
+			ns.HideFromController(section)
+		end
 		-- redraw when the friends tab shows, and when the search text changes
 		-- the window opening: our group is drawn straight away (1.2.1). Through Refresh it waited
 		-- 0.1 s, and showed its state from last time for that moment (a friend still online...).
 		-- Changes while it's open still go through Refresh, gathered.
 		list:HookScript("OnShow", function()
 			local ok, err = pcall(SocialList.Layout)
-			if not ok then ns.Debug("social section: %s", tostring(err)) end
+			if not ok then ns.QuietError("social section", err) end
 		end)
 		-- closing the window (or leaving the friends tab) clears our selection (1.1.4)
 		list:HookScript("OnHide", function() SetSelectedKey(nil) end)
@@ -753,8 +907,17 @@ ns.On("ADDON_LOADED", function() Install() end)
 -- for /ofl diag
 function SocialList.Info()
 	local state = installed and "installed" or failed and "failed" or "waiting for the Social window"
-	local layout = SINGLE_SCROLL and ("one scroll, Blizzard's list inside: %s, its height %s"):format(
-		tostring(engaged and true or false), tostring(list and list.ScrollBox and BlizzardExtent())) or "two scrolls"
-	return ("Social window section: %s, mode %s, shown %s, %s"):format(state, tostring(ns.db and ns.db.settings.socialMode),
-		tostring(section and section:IsShown()), layout)
+	local layout
+	if single == nil then
+		layout = "layout not chosen yet"
+	elseif single then
+		layout = ("one scroll (Blizzard's list inside: %s, its height %s)"):format(
+			tostring(engaged and true or false), tostring(list and list.ScrollBox and BlizzardExtent()))
+		if ControllerWaits() then layout = layout .. ", hidden until /reload (controller)" end
+	elseif navScroll then
+		layout = "controller layout (native scroll, cards reachable by the controller)"
+	else
+		layout = "two scrolls" .. (SINGLE_SCROLL and " (built for the controller, kept out of its cursor)" or "")
+	end
+	return ("section %s, shown %s, %s"):format(state, tostring(section and section:IsShown() or false), layout)
 end
