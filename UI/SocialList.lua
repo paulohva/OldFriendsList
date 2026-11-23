@@ -497,6 +497,77 @@ local function LayoutSingleScroll()
 	SyncHeights()
 end
 
+--------------------------------------------------------------------------------
+-- Controller layout (1.2.6, NATIVE_NAV): the two-scroll layout, but our cards are plain buttons in
+-- a native ScrollFrame instead of a ScrollBox. The controller's cursor moves through a ScrollFrame
+-- with engine calls only (its position, GetVerticalScroll / SetVerticalScroll): nothing this addon
+-- wrote is read, so it stays clean and can reach our cards. (Through a ScrollBox it reads the
+-- box's Lua state, written by us, and got tainted.)
+--------------------------------------------------------------------------------
+
+local NATIVE_NAV = true
+local navScroll, navContent    -- controller layout: the native scroll frame and what it scrolls
+
+local function LayoutControllerList()
+	if not SocialList.Enabled() then
+		section:Hide()
+		MoveBlizzardList(0)
+		return
+	end
+	local search = SearchText()
+	local keys, online = SocialList.Keys(search)
+	local collapsed = ns.db.settings.socialCollapsed and true or false
+	local height = SocialList.SectionHeight(#keys, collapsed, search == "")
+	if height == 0 then
+		section:Hide()
+		MoveBlizzardList(0)
+		return
+	end
+
+	local text = L["Old Friends List %d/%d"]:format(online, #keys)
+	if header.SetText then header:SetText(text) end
+	if header.ButtonText then header.ButtonText:SetText(text) end
+	SetCollapseIcon(collapsed)
+	UI.UpdateStale(header.Stale)
+
+	local shown = collapsed and 0 or #keys
+	local visible = math.min(shown, TWO_SCROLL_ROWS)
+	local step = ROW_HEIGHT + ROW_SPACING
+	navScroll:SetShown(visible > 0)
+	if visible > 0 then
+		navScroll:SetHeight(DOT_MARGIN + visible * step)
+		local width = navScroll:GetWidth()
+		if width and width > 0 then navContent:SetWidth(width) end
+		navContent:SetHeight(DOT_MARGIN + shown * step)
+	end
+	for i = 1, shown do
+		local row = rows[i]
+		if not row then
+			row = CreateFrame("Button", nil, navContent, ROW_TEMPLATE)
+			rows[i] = row
+		end
+		local y = -(DOT_MARGIN + (i - 1) * step)
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", navContent, "TOPLEFT", DOT_MARGIN, y)
+		row:SetPoint("TOPRIGHT", navContent, "TOPRIGHT", 0, y)
+		row:SetHeight(ROW_HEIGHT)
+		InitRow(row, { key = keys[i] })
+		row:Show()
+	end
+	for i = shown + 1, #rows do rows[i]:Hide() end
+	-- (fewer friends than before: don't stay scrolled past the end)
+	local range = navScroll:GetVerticalScrollRange() or 0
+	if navScroll:GetVerticalScroll() > range then navScroll:SetVerticalScroll(range) end
+
+	if section.copyWidth then
+		local width = list.ScrollBox:GetWidth()
+		if width and width > 0 then section:SetWidth(width) end
+	end
+	section:SetHeight(height)
+	section:Show()
+	MoveBlizzardList(height)
+end
+
 -- The controller interface was turned on after the one-scroll layout was built: Blizzard's list
 -- goes back exactly where it was and our group stays hidden in the Social window until a /reload
 -- builds the controller's layout (said once in chat). Off again: back to normal.
@@ -518,7 +589,9 @@ function SocialList.Layout()
 		end
 		return
 	end
-	if single then LayoutSingleScroll() else LayoutTwoScrolls() end
+	if single then LayoutSingleScroll()
+	elseif navScroll then LayoutControllerList()
+	else LayoutTwoScrolls() end
 end
 ns.Listen("CONTROLLER_CHANGED", function() SocialList.Refresh() end)
 
@@ -694,6 +767,46 @@ local function BuildTwoScrolls()
 	section:Hide()
 end
 
+-- the controller layout (NATIVE_NAV): like two scrolls, our cards in a native scroll frame
+local function BuildControllerList()
+	section = CreateFrame("Frame", nil, list)
+	section:SetFrameLevel(list.ScrollBox:GetFrameLevel() + 1)
+	local topAnchors = 0
+	for _, p in ipairs(saved[list.ScrollBox]) do
+		if p[1]:find("TOP") then
+			section:SetPoint(p[1], p[2], p[3], p[4], p[5])
+			topAnchors = topAnchors + 1
+		end
+	end
+	section.copyWidth = topAnchors < 2
+
+	header = BuildHeader()
+
+	-- (an inner margin so the status dots, which sit on the cards' corner, aren't clipped)
+	navScroll = CreateFrame("ScrollFrame", nil, section)
+	navScroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", -DOT_MARGIN, DOT_MARGIN - HEADER_GAP)
+	navScroll:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, DOT_MARGIN - HEADER_GAP)
+	navScroll:SetHeight(1)
+	navContent = CreateFrame("Frame", nil, navScroll)
+	navContent:SetSize(1, 1)
+	navScroll:SetScrollChild(navContent)
+	-- (the cards take the scroll frame's width, also when it only gets one after the first layout)
+	navScroll:SetScript("OnSizeChanged", function(_, width)
+		if width and width > 0 then navContent:SetWidth(width) end
+	end)
+	-- the mouse wheel, one card at a time
+	navScroll:EnableMouseWheel(true)
+	navScroll:SetScript("OnMouseWheel", function(self, delta)
+		local range = self:GetVerticalScrollRange() or 0
+		local y = math.max(0, math.min(range, self:GetVerticalScroll() - delta * (ROW_HEIGHT + ROW_SPACING)))
+		self:SetVerticalScroll(y)
+	end)
+	UI.PollWhileShown(section, UI.HOVER_EVERY, UI.HoverTracker(navScroll, function(fn) for _, row in ipairs(rows) do fn(row) end end,
+		UI.ShowFriendTooltip))
+
+	section:Hide()
+end
+
 local function Install()
 	if installed or failed then return end
 	local social = _G["SocialUIFrame"]
@@ -709,6 +822,9 @@ local function Install()
 		single = SINGLE_SCROLL and not ns.GamepadUI()
 		if single then
 			BuildSingleScroll()
+		elseif NATIVE_NAV and ns.GamepadUI() then
+			-- (the controller's cursor can reach our cards: see LayoutControllerList)
+			BuildControllerList()
 		else
 			BuildTwoScrolls()
 			-- (the controller's cursor skips our group: see `single`)
@@ -798,8 +914,10 @@ function SocialList.Info()
 		layout = ("one scroll (Blizzard's list inside: %s, its height %s)"):format(
 			tostring(engaged and true or false), tostring(list and list.ScrollBox and BlizzardExtent()))
 		if ControllerWaits() then layout = layout .. ", hidden until /reload (controller)" end
+	elseif navScroll then
+		layout = "controller layout (native scroll, cards reachable by the controller)"
 	else
-		layout = "two scrolls" .. (SINGLE_SCROLL and " (built for the controller)" or "")
+		layout = "two scrolls" .. (SINGLE_SCROLL and " (built for the controller, kept out of its cursor)" or "")
 	end
 	return ("section %s, shown %s, %s"):format(state, tostring(section and section:IsShown() or false), layout)
 end
