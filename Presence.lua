@@ -18,11 +18,15 @@ Presence.probe = {}         -- keys pinged by hand (/ofl ping): report the outco
 
 local TICK = 1.5            -- seconds between pings (keeps well under the addon message throttle)
 local TIMEOUT = 4           -- no "No player named" by then -> online
+local CONFIRM_TIMEOUT = 8   -- the same, for the second ping that confirms an offline friend came online
+local LATE_WINDOW = 30      -- a "No player named" this long after our ping still answers it (server lag; seen ~6 s late)
 local SUMMARY_MAX_WAIT = 90 -- the first check counts as done by then, even if some friends are still pending
 local GROUP_SCAN = 15       -- seconds between re-reads of the group (members' zones)
 local lastGroupScan = 0
 
 local pending = {}          -- key -> GetTime() of a ping awaiting an answer
+local unanswered = {}       -- key -> { n = pings with no "No player named" yet, at = GetTime() of the last one }
+local confirming = {}       -- key -> true: an offline friend's ping got no answer; ping once more before "online"
 local lastCheck = {}        -- key -> GetTime() of the last ping
 local decided = {}          -- system message id -> hidden? (filters run once per chat frame)
 local decidedCount = 0
@@ -42,6 +46,23 @@ do
 	NOT_FOUND_PATTERN = "^" .. s .. "$"
 end
 
+-- a ping went out: the server answers it once, if they're offline (maybe late, when it lags)
+local function Sent(key, now)
+	local u = unanswered[key]
+	if u and now - u.at > LATE_WINDOW then u = nil end
+	unanswered[key] = { n = (u and u.n or 0) + 1, at = now }
+end
+
+-- does this "No player named" answer one of our pings? (counts it as answered)
+local function TakeAnswer(key)
+	local u = key and unanswered[key]
+	if not u then return false end
+	if GetTime() - u.at > LATE_WINDOW then unanswered[key] = nil return false end
+	u.n = u.n - 1
+	if u.n <= 0 then unanswered[key] = nil end
+	return true
+end
+
 -- true when this message answers one of our pings (and should be hidden)
 local function HandleNotFound(msg, lineID)
 	msg = Safe.Value(msg)
@@ -52,7 +73,9 @@ local function HandleNotFound(msg, lineID)
 	if decided[id] ~= nil then return decided[id] end
 
 	local key = Data.Normalize(name)
-	local ours = key ~= nil and pending[key] ~= nil
+	local late = key ~= nil and pending[key] == nil
+	local ours = TakeAnswer(key)
+	if key then confirming[key] = nil end
 	decided[id] = ours
 	decidedCount = decidedCount + 1
 	if decidedCount > 200 then wipe(decided) decidedCount = 0 decided[id] = ours end
@@ -64,7 +87,7 @@ local function HandleNotFound(msg, lineID)
 	if key and Data.Has(key) then
 		pending[key] = nil
 		Data.SetStatus(key, "offline")
-		ns.Debug("%s is offline%s", key, ours and "" or " (from your own whisper)")
+		ns.Debug("%s is offline%s", key, not ours and " (from your own whisper)" or late and " (late answer)" or "")
 	elseif key then
 		pending[key] = nil
 	end
@@ -97,6 +120,7 @@ end
 -- an answer came some other way (handshake): stop waiting for this ping
 function Presence.Resolve(key)
 	pending[key] = nil
+	confirming[key] = nil
 end
 
 -- ask about this friend as soon as possible
@@ -161,17 +185,26 @@ local function Tick()
 	if not ns.db then return end
 	local now = GetTime()
 
-	-- unanswered pings: they're online
+	-- unanswered pings: they're online. An offline friend gets a second ping first, with more
+	-- time: when the server lags, the "No player named" can come after the first timeout.
 	for key, at in pairs(pending) do
-		if now - at >= TIMEOUT then
+		local limit = confirming[key] and CONFIRM_TIMEOUT or TIMEOUT
+		if now - at >= limit then
 			pending[key] = nil
-			if Presence.probe[key] then
-				Presence.probe[key] = nil
-				ns.Print("%s: online (no error within %ds).", key, TIMEOUT)
-			end
-			if Data.Has(key) then
-				ns.Debug("%s is online (no error)", key)
-				Data.SetStatus(key, "online")
+			if Data.Has(key) and Data.status[key] == "offline" and not confirming[key] then
+				confirming[key] = true
+				lastCheck[key] = nil   -- (pinged again on the next tick)
+				ns.Debug("%s: no error within %ds, pinging again to be sure", key, limit)
+			else
+				confirming[key] = nil
+				if Presence.probe[key] then
+					Presence.probe[key] = nil
+					ns.Print("%s: online (no error within %ds).", key, limit)
+				end
+				if Data.Has(key) then
+					ns.Debug("%s is online (no error)", key)
+					Data.SetStatus(key, "online")
+				end
 			end
 		end
 	end
@@ -198,7 +231,10 @@ local function Tick()
 	lastCheck[key] = now
 	if Comm.Ping(key) then
 		pending[key] = now
+		Sent(key, now)
 		ns.Debug("ping %s", key)
+	else
+		confirming[key] = nil
 	end
 end
 
@@ -215,7 +251,7 @@ end)
 
 ns.Listen("FRIENDS_CHANGED", function(key, what)
 	if what == "added" then lastCheck[key] = nil end
-	if what == "removed" then pending[key] = nil lastCheck[key] = nil end
+	if what == "removed" then pending[key] = nil lastCheck[key] = nil confirming[key] = nil end
 end)
 
 --------------------------------------------------------------------------------
@@ -226,6 +262,7 @@ local function SeenName(name)
 	local key = Data.Normalize(Safe.Value(name))
 	if key and Data.Has(key) then
 		pending[key] = nil
+		confirming[key] = nil
 		Data.Seen(key)
 	end
 end
@@ -457,6 +494,7 @@ function Presence.PingNow(key)
 	lastCheck[key] = GetTime()
 	if Comm.Ping(key) then
 		pending[key] = GetTime()
+		Sent(key, GetTime())
 		Presence.probe[key] = true
 		ns.Print("Pinged %s; result in a few seconds.", key)
 	else

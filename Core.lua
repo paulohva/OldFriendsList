@@ -33,6 +33,8 @@ local DEFAULTS = {
 	notifyBNet = false,      -- chat lines for Battle.net friends not on the list (opt-in, in the options; see BattleNet.ShouldNotify)
 	mailNames = true,        -- Old Friends List names in the mail's "To:" suggestions (1.1.0)
 	showOffline = true,      -- lists (Social window and separate window): offline friends shown (1.3.0)
+	superDebug = false,      -- /ofl enablesuperdebug (1.3.1): taint log + Lua errors + debug, set again at each login
+	-- (superDebugBefore: the player's own scriptErrors / taintLog / debug, put back when it's turned off)
 	debug = false,
 }
 ns.DEFAULTS = DEFAULTS
@@ -315,11 +317,69 @@ ns.On("ADDON_LOADED", function(name)
 end)
 
 --------------------------------------------------------------------------------
--- /ofl errors (1.2.6) is gone (1.3.0): it turned on the game's taint log and Lua errors on screen,
--- which is a developer's job, not the addon's. For whoever left it on: once, the player's own
--- "scriptErrors" goes back to what it was, the taint log off, and the two saved fields go.
+-- /ofl enablesuperdebug (1.3.1; not in the help or /ofl advanced: it's for us, when hunting a
+-- bug). Everything that can log, in one switch:
+--  - the game's taint log (_forever_/Logs/taint.log) at level 2: who tainted what, and where;
+--  - Lua errors on screen ("scriptErrors");
+--  - this addon's debug messages in chat (/ofl debug).
+-- Typed again (or "off"): all three back to what the player had before turning it on. While it's
+-- on, every login and /reload turns it off and on again (the game forgets the taint log when it
+-- closes) and says so once in chat, so it's never left on by mistake. Off, the default: the
+-- addon doesn't touch any of these.
 --------------------------------------------------------------------------------
 
+local TAINT_LEVEL = "2"
+local function GetCVarValue(name)
+	local get = (C_CVar and C_CVar.GetCVar) or GetCVar
+	if not get then return nil end
+	local ok, v = pcall(get, name)
+	return ok and v or nil
+end
+local function SetCVarValue(name, value)
+	local set = (C_CVar and C_CVar.SetCVar) or SetCVar
+	if set then pcall(set, name, value) end
+	return GetCVarValue(name) == value
+end
+function ns.TaintLogLevel() return GetCVarValue("taintLog") end
+function ns.ScriptErrorsShown() return GetCVarValue("scriptErrors") == "1" end
+
+-- off, then on: the taint log restarts at the level, Lua errors on screen, debug messages on.
+-- True if the game took the taint log (some clients may refuse it).
+local function SuperDebugOn()
+	SetCVarValue("taintLog", "0")
+	SetCVarValue("scriptErrors", "1")
+	ns.db.settings.debug = true
+	return SetCVarValue("taintLog", TAINT_LEVEL)
+end
+
+function ns.SetSuperDebug(on)
+	local s = ns.db.settings
+	if on then
+		-- the player's own values, kept once (not again while it's on)
+		if not s.superDebug then
+			s.superDebugBefore = { scriptErrors = GetCVarValue("scriptErrors"), taintLog = GetCVarValue("taintLog"),
+				debug = s.debug and true or false }
+		end
+		s.superDebug = true
+		return SuperDebugOn()
+	end
+	local before = s.superDebugBefore or {}
+	s.superDebug, s.superDebugBefore = false, nil
+	s.debug = before.debug or false
+	SetCVarValue("scriptErrors", before.scriptErrors or "0")
+	return SetCVarValue("taintLog", before.taintLog or "0")
+end
+
+-- at login and /reload: only when it's on
+local function ApplySuperDebug()
+	if not (ns.db and ns.db.settings.superDebug) then return end
+	SuperDebugOn()
+	if ns.L then ns.Print(ns.L["Super debug is on: taint log level %s, Lua errors on screen, debug messages. Type /ofl enablesuperdebug again to turn it all off."],
+		tostring(ns.TaintLogLevel())) end
+end
+
+-- /ofl errors (1.2.6) was taken out in 1.3.0: for whoever upgrades with it still on, once, the
+-- player's own "scriptErrors" goes back to what it was, the taint log off, and the two saved fields go
 local function ForgetErrorMode()
 	local s = ns.db and ns.db.settings
 	if not s then return end
@@ -335,6 +395,7 @@ end
 
 ns.On("PLAYER_LOGIN", function()
 	ForgetErrorMode()
+	ApplySuperDebug()
 	ns.WatchActionMessages()
 	ns.Fire("LOGIN")
 end)
