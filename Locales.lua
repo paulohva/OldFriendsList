@@ -48,6 +48,7 @@ if locale == "ptBR" then
 	L["Click to open."] = "Clique para abrir."
 	L["Your list of characters, the classic way."] = "Sua lista de personagens, do jeito clássico."
 	L["Toggle Old Friends List"] = "Abrir/fechar a Old Friends List"
+	L["Open or close the list"] = "Abrir ou fechar a lista"
 
 	-- adding friends
 	L["That's not a valid character name. Use the first and last name, e.g. Asha Brightvale."] =
@@ -80,8 +81,6 @@ if locale == "ptBR" then
 	-- minimap button
 	L["Left-click: open the list"] = "Clique esquerdo: abrir a lista"
 	L["Right-click: options"] = "Clique direito: opções"
-	L["Open the list"] = "Abrir a lista"
-	L["Settings and key binding..."] = "Opções e atalho..."
 	L["Hide minimap button"] = "Esconder botão do minimapa"
 	L["Minimap button hidden. /ofl minimap brings it back."] = "Botão do minimapa escondido. /ofl minimap mostra de novo."
 	L["Minimap button shown."] = "Botão do minimapa visível."
@@ -90,6 +89,12 @@ if locale == "ptBR" then
 	L["Key Binding"] = "Atalho"
 	L["List"] = "Lista"
 	L["Show level and zone"] = "Mostrar nível e zona"
+	L["Show offline friends"] = "Mostrar amigos offline"
+	L["Blizzard Social"] = "Amigos da Blizzard"
+	L["Old Friends List window"] = "Janela da Old Friends List"
+	L["Show friends who are offline in the list, in the Social window and in the separate window."] =
+		"Mostra os amigos offline na lista, na janela de Amigos e na janela separada."
+	L["No friends online."] = "Nenhum amigo online."
 	L["Show each friend's level, class and zone under their name. Turn it off to show only names."] =
 		"Mostra o nível, a classe e a zona de cada amigo debaixo do nome. Desligado, mostra só os nomes."
 	L["Class colors"] = "Cores de classe"
@@ -104,29 +109,29 @@ if locale == "ptBR" then
 	L["Show a message in chat when a friend logs out."] = "Mostra um aviso no chat quando um amigo sai do jogo."
 	L["Play a sound when a friend comes online."] = "Toca um som quando um amigo fica online."
 	L["Show minimap button"] = "Mostrar botão no minimapa"
-	L["Shortcut tab in the Blizzard Social window"] = "Aba de atalho na janela de amigos da Blizzard"
+	L["Tab in the Social window"] = "Aba na janela de Amigos"
 	L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Only with the separate window: not shown when Old Friends List is already in that window."] =
-		"Acrescenta uma aba da Old Friends List abaixo das abas da janela de amigos do jogo (O). Só com a janela separada: não aparece quando a Old Friends List já está nessa janela."
+		"Acrescenta uma aba da Old Friends List abaixo das abas da janela de Amigos do jogo (O). Só com a janela separada: não aparece quando a Old Friends List já está nessa janela."
 
 	-- Social window integration, key swap and first-time setup (0.3.0)
-	L["Blizzard Social window"] = "Janela de amigos da Blizzard"
-	L["Old Friends List window"] = "Janela da Old Friends List"
 	L["Old Friends List %d/%d"] = "Old Friends List %d/%d"
 	L["Couldn't add your friends to the Social window; using the separate window."] =
-		"Não foi possível adicionar seus amigos à janela de amigos; usando a janela separada."
+		"Não foi possível adicionar seus amigos à janela de Amigos; usando a janela separada."
 	L["The game blocked an action (%s). Please report it with the output of /ofl diag."] =
 		"O jogo bloqueou uma ação (%s). Por favor, reporte com o resultado de /ofl diag."
 	-- controller mode (1.2.6)
 	L["Controller mode: type /reload to see Old Friends List in the Social window."] =
-		"Modo controle: digite /reload para ver a Old Friends List na janela de amigos."
+		"Modo controle: digite /reload para ver a Old Friends List na janela de Amigos."
 	L["Invite to group"] = "Convidar para o grupo"
 	L["Already in your group."] = "Já está no seu grupo."
 	L["Only the group leader can invite."] = "Só o líder do grupo pode convidar."
 	L["Your group is full."] = "Seu grupo está cheio."
 	L["Hide friends already shown by Battle.net"] = "Esconder amigos que o Battle.net já mostra"
+	L["Skip Battle.net duplicates"] = "Sem repetir o Battle.net"
 	L["In the Social window, a character from your Old Friends List that a Battle.net friend is playing right now shows only on Blizzard's card, not in the Old Friends List group. It comes back when they log off or switch character."] =
-		"Na janela de amigos, um personagem da sua Old Friends List que um amigo Battle.net está jogando agora aparece só no cartão da Blizzard, não no grupo Old Friends List. Ele volta quando o amigo sair do jogo ou trocar de personagem."
+		"Na janela de Amigos, um personagem da sua Old Friends List que um amigo Battle.net está jogando agora aparece só no cartão da Blizzard, não no grupo Old Friends List. Ele volta quando o amigo sair do jogo ou trocar de personagem."
 	L["Show Battle.net friends playing WoW"] = "Mostrar amigos Battle.net jogando WoW"
+	L["Include Battle.net friends"] = "Incluir amigos Battle.net"
 	L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."] =
 		"Na janela separada, mostra também seus amigos Battle.net que estão jogando agora. Os da outra facção só podem receber sussurro pelo Battle.net."
 	L["Battle.net friend: %s"] = "Amigo Battle.net: %s"
@@ -150,7 +155,7 @@ if locale == "ptBR" then
 	L["You can choose after the fight."] = "Você pode escolher depois do combate."
 	L["Battle.net friends"] = "Amigos Battle.net"
 	L["Also announce when Battle.net friends who aren't on your Old Friends List log in or out of WoW Forever. Only with Old Friends List in the Social window, or with Battle.net friends shown in the separate window."] =
-		"Avisa também quando amigos Battle.net que não estão na sua Old Friends List entram ou saem do WoW Forever. Só com a Old Friends List na janela de amigos, ou com os amigos Battle.net na janela separada."
+		"Avisa também quando amigos Battle.net que não estão na sua Old Friends List entram ou saem do WoW Forever. Só com a Old Friends List na janela de Amigos, ou com os amigos Battle.net na janela separada."
 	L["Add a character"] = "Adicionar personagem"
 	L["Add a character to Old Friends List"] = "Adicionar um personagem à Old Friends List"
 	L["Key bindings can't change in combat. Try again after the fight."] =
@@ -158,39 +163,40 @@ if locale == "ptBR" then
 	L["%s is used for \"%s\", so the keys weren't swapped. Change them in Options > AddOns > Old Friends List."] =
 		"%s está sendo usado para \"%s\", por isso as teclas não foram trocadas. Mude-as em Opções > AddOns > Old Friends List."
 	L["O now opens Old Friends List, and Shift-O the Social window."] =
-		"Agora o O abre a Old Friends List, e o Shift-O a janela de amigos."
+		"Agora o O abre a Old Friends List, e o Shift-O a janela de Amigos."
 	L["O opens the Social window again, and Shift-O Old Friends List."] =
-		"O O voltou a abrir a janela de amigos, e o Shift-O a Old Friends List."
-	L["Where to see Old Friends List"] = "Onde ver a Old Friends List"
+		"O O voltou a abrir a janela de Amigos, e o Shift-O a Old Friends List."
+	L["Where to show the list"] = "Onde mostrar a lista"
+	L["In the Social window"] = "Na janela de Amigos"
 	L["Window"] = "Janela"
-	L["Old Friends List inside the game's Social window (O), or in a window of its own (Shift-O)."] =
-		"A Old Friends List dentro da janela de amigos do jogo (O), ou numa janela própria (Shift-O)."
+	L["Old Friends List inside the game's Social window, or in a window of its own."] =
+		"A Old Friends List dentro da janela de Amigos do jogo, ou numa janela própria."
 	L["Old Friends List appears together with the game's friends list. Shift-O still opens the separate window."] =
 		"A Old Friends List aparece junto com a lista de amigos do jogo. O Shift-O continua abrindo a janela separada."
 	L["Advanced"] = "Avançado"
 	L["First-time setup"] = "Configuração inicial"
 	L["Run the setup again"] = "Refazer a configuração"
-	L["Social window or separate window"] = "Janela de amigos ou janela separada"
+	L["Social or separate window"] = "Amigos ou janela separada"
 	L["Choose again: Old Friends List in the Social window or in a separate window."] =
-		"Escolha de novo: a Old Friends List na janela de amigos ou numa janela separada."
+		"Escolha de novo: a Old Friends List na janela de Amigos ou numa janela separada."
 	L["Old Friends List now appears in the Social window (O). Shift-O still opens the separate window."] =
-		"A Old Friends List agora aparece na janela de amigos (O). O Shift-O continua abrindo a janela separada."
+		"A Old Friends List agora aparece na janela de Amigos (O). O Shift-O continua abrindo a janela separada."
 	L["Old Friends List opens in its own window (%s)."] = "A Old Friends List abre na sua própria janela (%s)."
 	L["(your current choice)"] = "(sua escolha atual)"
 	L["Choose"] = "Escolher"
 	L["How would you like to see your friends?"] = "Como você quer ver seus amigos?"
-	L["In the Social window (O)"] = "Na janela de amigos (O)"
+	L["In the Social window (O)"] = "Na janela de Amigos (O)"
 	L["Separate window"] = "Janela separada"
 	L["A classic friends window of its own, opened with Shift-O."] = "Uma janela de amigos clássica, só dela, aberta com Shift-O."
 	L["Use O to open this window (the game's friends window moves to Shift-O)"] =
-		"Usar o O para abrir esta janela (a janela de amigos do jogo passa para o Shift-O)"
+		"Usar o O para abrir esta janela (a janela de Amigos do jogo passa para o Shift-O)"
 	L["New: Old Friends List can also appear in the game's Social window. Nothing changes unless you pick it."] =
-		"Novidade: a Old Friends List também pode aparecer na janela de amigos do jogo. Nada muda a não ser que você escolha isso."
+		"Novidade: a Old Friends List também pode aparecer na janela de Amigos do jogo. Nada muda a não ser que você escolha isso."
 	L["(what you have now: nothing changes)"] = "(o que você tem agora: nada muda)"
 	L["Nothing changed: Old Friends List keeps its own window (%s)."] = "Nada mudou: a Old Friends List continua na sua própria janela (%s)."
 	L["show the first-time setup again"] = "mostra de novo a configuração inicial"
 	L["Show the Old Friends List button around the minimap."] = "Mostra o botão da Old Friends List ao redor do minimapa."
-	L["Share my zone with friends"] = "Compartilhar minha zona com amigos"
+	L["Share my zone"] = "Compartilhar minha zona"
 	L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."] =
 		"Informa a sua zona aos amigos que também usam a Old Friends List. Só quem está na sua lista recebe."
 	L["Check interval"] = "Intervalo de verificação"
@@ -223,15 +229,10 @@ if locale == "ptBR" then
 	L["share your zone with friends who use the addon"] = "compartilha sua zona com amigos que usam o addon"
 	L["how often each friend is checked (15-300)"] = "de quanto em quanto tempo cada amigo é verificado (15-300)"
 	L["check one character now and print the result"] = "verifica um personagem agora e mostra o resultado"
-	L["check which game APIs this client has"] = "verifica quais APIs do jogo este cliente tem"
+	L["offline friends in the lists"] = "amigos offline nas listas"
+	L["information for bug reports"] = "informações para relatar bugs"
+	L["check the names suggested in the mail"] = "verifica os nomes sugeridos no correio"
 	L["toggle debug messages"] = "liga ou desliga as mensagens de depuração"
-	L["error mode for bug reports: the game's taint log and Lua errors on screen (again to turn off)"] =
-		"modo de erros para relatar bugs: registro de taint do jogo e erros Lua na tela (de novo para desligar)"
-	L["Error mode is on: taint log level %s, Lua errors on screen. Type /ofl errors again to turn it off."] =
-		"Modo de erros ligado: registro de taint nível %s, erros Lua na tela. Digite /ofl errors de novo para desligar."
-	L["Error mode is off."] = "Modo de erros desligado."
-	L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."] =
-		"O jogo não aceitou a configuração do registro de taint (agora %s). Use /console taintLog 2."
 	L["<seconds>"] = "<segundos>"
 	L["<text>"] = "<texto>"
 	L["on"] = "ligado"

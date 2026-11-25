@@ -32,9 +32,8 @@ local DEFAULTS = {
 	showBNet = false,        -- separate window: also list Battle.net friends playing this game
 	notifyBNet = false,      -- chat lines for Battle.net friends not on the list (opt-in, in the options; see BattleNet.ShouldNotify)
 	mailNames = true,        -- Old Friends List names in the mail's "To:" suggestions (1.1.0)
+	showOffline = true,      -- lists (Social window and separate window): offline friends shown (1.3.0)
 	debug = false,
-	errorMode = false,       -- /ofl errors: taint log + Lua errors on screen, set again at each login (1.2.6)
-	scriptErrorsBefore = nil, -- the player's own "scriptErrors" value, put back when /ofl errors is turned off
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -158,16 +157,56 @@ end
 -- ADDON_ACTION_BLOCKED event, so the watcher above never sees them, and they don't say which addon.
 -- Counted for /ofl diag, with where they came from. A secure post-hook: it runs after Blizzard's
 -- function, changes nothing, and only runs when the message is shown (never, in normal play).
+-- No taint log or Lua error setting needed: the call stack is read right then.
 ns.actionMessages = { count = 0 }
 local messageHooked
+
+-- From a call stack (debugstack's text): the Blizzard function that showed the message, and the
+-- first addon (not Blizzard's) in the calls that led to it. That addon *called*; it isn't
+-- necessarily the one that tainted (Blizzard code reading something tainted shows no addon).
+-- Pure, for tests: (blocked, started)
+local SKIP_FUNCTIONS = { DisplayInterfaceActionBlockedMessage = true, EnsureIsSecure = true }
+
+-- one stack line -> file (under Interface/AddOns/), line number, function name (or nil each).
+-- Lines look like: [Interface/AddOns/Blizzard_X/File.lua]:271: in function 'Name'
+-- (or <Interface/AddOns/...:451>, '?', `Mixin:Method', main chunk)
+local function StackLine(line)
+	local path, lineNo = line:match('Interface/AddOns/([^%]"]-)"?%]:(%d+)')
+	if not path then path, lineNo = line:match('Interface/AddOns/([^%]":]+):(%d+)') end
+	local fn = line:match("in function [`']([^'`]+)'")
+	fn = fn and fn:match("([%w_]+)$")
+	return path, lineNo, fn
+end
+
+function ns.ParseActionStack(stack)
+	local blocked, started
+	for line in tostring(stack or ""):gmatch("[^\n]+") do
+		local path, lineNo, fn = StackLine(line)
+		local addon = path and path:match("^([^/]+)")
+		if path and not blocked and addon ~= "OldFriendsList" and not (fn and SKIP_FUNCTIONS[fn]) then
+			blocked = (fn and (fn .. " (") or "(") .. path .. ":" .. lineNo .. ")"
+		end
+		if not started then
+			if addon and not addon:find("^Blizzard_") and addon ~= "OldFriendsList" then
+				started = addon .. " (" .. path .. ":" .. lineNo .. ")"
+			elseif not path then
+				-- a /run or macro: [string "the code"], not Blizzard's XML scripts ([string "@..."], [string "*:..."])
+				local code = line:match('%[string "([^"]*)"%]')
+				if code and not code:find("^[@*]") then started = "a script (/run or macro)" end
+			end
+		end
+	end
+	return blocked, started
+end
+
 local function OnActionMessage()
 	local m = ns.actionMessages
 	m.count, m.last = m.count + 1, date("%H:%M:%S")
-	-- the first interface file below us on the stack that isn't the chat's: who showed it
-	local stack = debugstack and debugstack(2, 12, 0) or ""
-	for file in stack:gmatch("Interface/AddOns/([^/%]:]+)") do
-		if file ~= "Blizzard_ChatFrameBase" then m.from = file break end
-	end
+	-- the top of the stack (where it was shown) and its bottom (where the calls started)
+	local stack = debugstack and debugstack(2, 12, 8) or ""
+	local blocked, started = ns.ParseActionStack(stack)
+	m.blocked = blocked or "?"
+	m.started = started or "Blizzard code only (no addon in the call chain)"
 end
 function ns.WatchActionMessages()
 	if messageHooked then return end
@@ -276,54 +315,26 @@ ns.On("ADDON_LOADED", function(name)
 end)
 
 --------------------------------------------------------------------------------
--- /ofl errors (1.2.6): the game's own error tools, for bug hunting, in one switch:
---  - its taint log (_forever_/Logs/taint.log) at level 2: who tainted what, and where;
---  - Lua errors shown on screen ("scriptErrors"): errors that never reach /ofl diag.
--- The game forgets the taint log when it closes, so while this is on both are set again at each
--- login, and it's said once in chat so nobody leaves it on by mistake (the log grows fast, for
--- every addon). Off: the taint log off, and Lua errors back to what the player had before.
+-- /ofl errors (1.2.6) is gone (1.3.0): it turned on the game's taint log and Lua errors on screen,
+-- which is a developer's job, not the addon's. For whoever left it on: once, the player's own
+-- "scriptErrors" goes back to what it was, the taint log off, and the two saved fields go.
 --------------------------------------------------------------------------------
 
-local TAINT_LEVEL = "2"
-local function GetCVarValue(name)
-	local get = (C_CVar and C_CVar.GetCVar) or GetCVar
-	if not get then return nil end
-	local ok, v = pcall(get, name)
-	return ok and v or nil
-end
-local function SetCVarValue(name, value)
-	local set = (C_CVar and C_CVar.SetCVar) or SetCVar
-	if set then pcall(set, name, value) end
-	return GetCVarValue(name) == value
-end
-function ns.TaintLogLevel() return GetCVarValue("taintLog") end
-function ns.ScriptErrorsShown() return GetCVarValue("scriptErrors") == "1" end
-
--- turns both on or off; true if the game took the taint log (some clients may refuse it)
-function ns.SetErrorMode(on)
-	local s = ns.db.settings
-	if on then
-		if not s.errorMode then s.scriptErrorsBefore = GetCVarValue("scriptErrors") end
-		s.errorMode = true
-		SetCVarValue("scriptErrors", "1")
-		return SetCVarValue("taintLog", TAINT_LEVEL)
+local function ForgetErrorMode()
+	local s = ns.db and ns.db.settings
+	if not s then return end
+	if s.errorMode then
+		local set = (C_CVar and C_CVar.SetCVar) or SetCVar
+		if set then
+			pcall(set, "scriptErrors", s.scriptErrorsBefore or "0")
+			pcall(set, "taintLog", "0")
+		end
 	end
-	s.errorMode = false
-	SetCVarValue("scriptErrors", s.scriptErrorsBefore or "0")
-	s.scriptErrorsBefore = nil
-	return SetCVarValue("taintLog", "0")
-end
-
-local function ApplyErrorMode()
-	if not (ns.db and ns.db.settings.errorMode) then return end
-	SetCVarValue("taintLog", TAINT_LEVEL)
-	SetCVarValue("scriptErrors", "1")
-	if ns.L then ns.Print(ns.L["Error mode is on: taint log level %s, Lua errors on screen. Type /ofl errors again to turn it off."],
-		tostring(ns.TaintLogLevel())) end
+	s.errorMode, s.scriptErrorsBefore = nil, nil
 end
 
 ns.On("PLAYER_LOGIN", function()
-	ApplyErrorMode()
+	ForgetErrorMode()
 	ns.WatchActionMessages()
 	ns.Fire("LOGIN")
 end)

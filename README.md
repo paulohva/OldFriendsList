@@ -17,14 +17,16 @@ It works with any character, whether or not they use the addon.
 - **A list of characters.** Add them by name, or right-click a player and choose
   **Add to Old Friends List**: on portraits, party and raid frames, names in chat and the guild roster.
 - **Online status at a glance.** Level, class and zone for each friend, and "last seen" with the
-  last known level and class for friends who are offline.
+  last known level and class for friends who are offline. Offline friends can be hidden, with an
+  option.
 - **One-click actions.** Double-click a friend to whisper them; use the buttons or the right-click
   menu to **Invite**, **Who**, **Set Note** or **Remove**.
 - **Login and logout notifications.** A chat line and a sound when a friend comes online, a line
   when they go offline.
 - **Shortcut and options.** **Shift-O** opens the list. The gear in the window (or `/ofl config`)
-  opens the options: level and zone in the list, class colors, notifications, minimap button and
-  the key binding.
+  opens the options: level and zone in the list, offline friends shown or hidden, class colors,
+  notifications, minimap button and the key binding. In the Social window, right-click the group's
+  header for the settings.
 - **In the game's Social window (optional).** Old Friends List can appear as a group above
   Favorites in the friends window (O), scrolling together with the game's list, with an invite
   button on each card and a "+" on its header to add a character. Or the separate window can
@@ -36,7 +38,7 @@ It works with any character, whether or not they use the addon.
   Right-click a Battle.net friend in the Social window to add the character they're playing.
 - **Mail.** Typing a name in the mail's To: field suggests the friends on your list too, next to
   the game's own suggestions.
-- **Minimap button.** Hover it to see who's online; click to open the list, right-click for the
+- **Minimap button.** Click to open the list, right-click for the
   options or to hide the button. Optionally, a tab in the game's Social window (O) opens it too.
 - **Better with friends.** Friends who also run Old Friends List show up instantly and share
   their level, class and zone.

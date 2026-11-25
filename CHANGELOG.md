@@ -4,6 +4,26 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.3.0
+
+- **New:** hide offline friends: turn off **Show offline friends** in the options (Options >
+  AddOns > Old Friends List, under General), for the Social window and the separate window. The
+  count stays the same ("3/6"), so you still see how many there are. Also
+  `/ofl showoffline on|off`.
+- In the Social window (O), right-click the Old Friends List group's header for the settings.
+- The options are tidier: after the choice of where to show the list, each window has its own
+  title, **Blizzard Social** and **Old Friends List window**. The Social window's settings only
+  show with Old Friends List in it; the separate window's always do, since it's still there with
+  its key. Shorter names, so they're no longer cut off; the details are in their tooltips.
+- The right-click menus (minimap button, the Social window's header) say just **Settings**; the
+  minimap button's no longer has "Open the list" (left-click does that).
+- The minimap button's tooltip is shorter: just what left-click and right-click do.
+- `/ofl diag`: for the game's "action failed" messages, the Blizzard function that showed the
+  last one and the first addon in the calls that led to it.
+- `/ofl errors` is gone: turning on the game's taint log and Lua errors is a job for developers,
+  not for the addon. If you had it on, Lua errors on screen go back to how they were.
+- `/ofl advanced` lists `/ofl showoffline` and `/ofl diag mail`, with clearer descriptions.
+
 ## 1.2.6
 
 - **Fix:** with a controller, moving the cursor in the Social window (O) could show "Interface
