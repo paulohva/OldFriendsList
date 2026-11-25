@@ -344,11 +344,14 @@ end
 function ns.TaintLogLevel() return GetCVarValue("taintLog") end
 function ns.ScriptErrorsShown() return GetCVarValue("scriptErrors") == "1" end
 
--- off, then on: the taint log restarts at the level, Lua errors on screen (and with "all", the
--- debug messages). True if the game took the taint log (some clients may refuse it).
+-- everything off, then everything on again: the taint log (restarts at the level), Lua errors on
+-- screen and, with "all", the debug messages. True if the game took the taint log (some clients
+-- may refuse it).
 local function SuperDebugOn()
 	local s = ns.db.settings
 	SetCVarValue("taintLog", "0")
+	SetCVarValue("scriptErrors", "0")
+	if s.superDebugAll then s.debug = false end
 	SetCVarValue("scriptErrors", "1")
 	if s.superDebugAll then s.debug = true end
 	return SetCVarValue("taintLog", TAINT_LEVEL)
