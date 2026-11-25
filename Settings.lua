@@ -123,12 +123,13 @@ local function VarType(kind)
 	return kind
 end
 
--- onChange: called after the player flips it (e.g. to redraw the list)
+-- onChange: called after the player flips it (e.g. to redraw the list). Returns the setting and
+-- its row (initializer)
 local function AddCheckbox(key, name, tooltip, onChange)
 	local variable = "OldFriendsList_" .. key
 	local setting = Settings.RegisterAddOnSetting(category, variable, key, ns.db.settings,
 		VarType("boolean"), name, ns.DEFAULTS[key])
-	Settings.CreateCheckbox(category, setting, tooltip)
+	local initializer = Settings.CreateCheckbox(category, setting, tooltip)
 	if onChange then
 		if setting.SetValueChangedCallback then
 			setting:SetValueChangedCallback(function() onChange() end)
@@ -136,10 +137,30 @@ local function AddCheckbox(key, name, tooltip, onChange)
 			Settings.SetOnValueChangedCallback(variable, function() onChange() end)
 		end
 	end
+	return setting, initializer
 end
 
 local function RefreshList()
 	if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+end
+
+-- both lists: the separate window and the Social window's group
+local function RefreshBothLists()
+	RefreshList()
+	if ns.SocialList and ns.SocialList.Refresh then ns.SocialList.Refresh() end
+end
+
+-- "show offline friends" (1.3.0), from /ofl showoffline: through the options panel's setting when
+-- there is one, so the panel shows the same thing
+function Options.SetShowOffline(show)
+	show = show and true or false
+	local setting = Options.showOfflineSetting
+	if setting and setting.SetValue then
+		local ok = pcall(setting.SetValue, setting, show)
+		if ok and ns.db.settings.showOffline == show then return end
+	end
+	ns.db.settings.showOffline = show
+	RefreshBothLists()
 end
 
 local function AddMinimapCheckbox()
@@ -163,8 +184,15 @@ end
 
 local function AddHeader(layout, text)
 	if CreateSettingsListSectionHeaderInitializer then
-		layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text))
+		local header = CreateSettingsListSectionHeaderInitializer(text)
+		layout:AddInitializer(header)
+		return header
 	end
+end
+
+-- shown only while shownWhen() is true (the panel re-checks whenever a setting changes)
+local function ShowWhen(row, shownWhen)
+	if row and row.AddShownPredicate then pcall(row.AddShownPredicate, row, shownWhen) end
 end
 
 -- A button to the game's Key Bindings, where our binding and the Social window's live.
@@ -175,7 +203,7 @@ end
 -- panel adds search tags (addSearchTags = false).
 local function AddKeybindingButton(layout)
 	if not CreateSettingsButtonInitializer then return end
-	layout:AddInitializer(CreateSettingsButtonInitializer(L["Toggle Old Friends List"], ns.G("KEY_BINDINGS", "Key Bindings"),
+	layout:AddInitializer(CreateSettingsButtonInitializer(L["Open or close the list"], ns.G("KEY_BINDINGS", "Key Bindings"),
 		function()
 			local id = Settings.KEYBINDINGS_CATEGORY_ID
 			if id then pcall(Settings.OpenToCategory, id) end
@@ -184,63 +212,67 @@ local function AddKeybindingButton(layout)
 end
 
 
--- Where to see Old Friends List: a dropdown with the two choices (like the setup's two cards).
--- Built through Blizzard's own dropdown path, like the checkboxes (nothing addon-made that the
--- Options search runs, see AddKeybindingButton).
-local function AddModeSection(layout)
-	AddHeader(layout, L["Where to see Old Friends List"])
-	local create = Settings.CreateDropdown or Settings.CreateDropDown
-	if not (create and Settings.CreateControlTextContainer) then return end
-	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_mode", VarType("string"),
-		L["Window"], "separate",
-		function() return ns.db.settings.socialMode == "integrated" and "integrated" or "separate" end,
-		function(value)
-			Options.SetMode(value == "integrated" and "integrated" or "separate")
-			-- the shortcut tab's checkbox shows off with the Social window, its choice otherwise
-			if Settings.NotifyUpdate then pcall(Settings.NotifyUpdate, "OldFriendsList_socialIcon") end
-		end)
-	local function Choices()
-		local container = Settings.CreateControlTextContainer()
-		container:Add("integrated", L["In the Social window (O)"])
-		container:Add("separate", L["Separate window"])
-		return container:GetData()
-	end
-	create(category, setting, Choices,
-		L["Old Friends List inside the game's Social window (O), or in a window of its own (Shift-O)."])
-end
+-- Where to show the list (1.3.0): the choice (a dropdown, like the setup's two cards), then each
+-- window's settings under its own title ("Blizzard Social", "Old Friends List window"; no keys in
+-- them, since the player can change those). The Social window's only show with Old Friends List
+-- in it; the separate window's always (it's still there with its key). The panel re-checks what's
+-- shown whenever a setting changes. Names short enough for Blizzard's label column (about 26
+-- letters in pt-BR); the details are in the tooltips. Built through Blizzard's own paths, like the
+-- checkboxes (nothing addon-made that the Options search runs, see AddKeybindingButton).
+local function AddWindowSection(layout)
+	AddHeader(layout, L["Where to show the list"])
+	local s = ns.db.settings
+	local function Integrated() return s.socialMode == "integrated" end
+	local function Separate() return not Integrated() end
 
--- options for Old Friends List inside the game's Social window
-local function AddSocialSection(layout)
-	AddHeader(layout, L["Blizzard Social window"])
-	AddCheckbox("hideBNetDuplicates", L["Hide friends already shown by Battle.net"],
+	local create = Settings.CreateDropdown or Settings.CreateDropDown
+	if create and Settings.CreateControlTextContainer then
+		local setting = Settings.RegisterProxySetting(category, "OldFriendsList_mode", VarType("string"),
+			L["Window"], "separate",
+			function() return Integrated() and "integrated" or "separate" end,
+			function(value)
+				Options.SetMode(value == "integrated" and "integrated" or "separate")
+				-- the shortcut tab's checkbox shows off with the Social window, its choice otherwise
+				if Settings.NotifyUpdate then pcall(Settings.NotifyUpdate, "OldFriendsList_socialIcon") end
+			end)
+		local function Choices()
+			local container = Settings.CreateControlTextContainer()
+			container:Add("integrated", L["In the Social window"])
+			container:Add("separate", L["Separate window"])
+			return container:GetData()
+		end
+		create(category, setting, Choices,
+			L["Old Friends List inside the game's Social window, or in a window of its own."])
+	end
+
+	-- the Social window: only with Old Friends List in it
+	ShowWhen(AddHeader(layout, L["Blizzard Social"]), Integrated)
+	local _, hideDuplicates = AddCheckbox("hideBNetDuplicates", L["Skip Battle.net duplicates"],
 		L["In the Social window, a character from your Old Friends List that a Battle.net friend is playing right now shows only on Blizzard's card, not in the Old Friends List group. It comes back when they log off or switch character."],
 		function() if ns.SocialList then ns.SocialList.Refresh() end end)
-end
+	ShowWhen(hideDuplicates, Integrated)
 
--- options for the separate window
-local function AddSeparateSection(layout)
+	-- the separate window: always
 	AddHeader(layout, L["Old Friends List window"])
-	AddCheckbox("showBNet", L["Show Battle.net friends playing WoW"],
+	AddCheckbox("showBNet", L["Include Battle.net friends"],
 		L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."],
 		RefreshList)
 	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
 	-- The shortcut tab only exists with the separate window: with Old Friends List inside the
 	-- Social window it's off and can't be turned on (the saved choice comes back with the
-	-- separate window). Re-evaluated by the panel when the "Window" choice changes.
-	local s = ns.db.settings
-	local function Separate() return s.socialMode ~= "integrated" end
+	-- separate window).
 	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_socialIcon", VarType("boolean"),
-		L["Shortcut tab in the Blizzard Social window"], ns.DEFAULTS.socialIcon,
+		L["Tab in the Social window"], ns.DEFAULTS.socialIcon,
 		function() return (s.socialIcon and Separate()) and true or false end,
 		function(value)
 			s.socialIcon = value and true or false
 			if ns.UI and ns.UI.UpdateSocialIcon then ns.UI.UpdateSocialIcon() end
 		end)
-	local initializer = Settings.CreateCheckbox(category, setting,
+	local tabRow = Settings.CreateCheckbox(category, setting,
 		L["Adds an Old Friends List tab under the tabs of the game's Social window (O). Only with the separate window: not shown when Old Friends List is already in that window."])
-	if initializer and initializer.AddModifyPredicate then
-		initializer:AddModifyPredicate(Separate)
-		if initializer.AddEvaluateStateCVar then initializer:AddEvaluateStateCVar("OldFriendsList_mode") end
+	if tabRow and tabRow.AddModifyPredicate then
+		tabRow:AddModifyPredicate(Separate)
+		if tabRow.AddEvaluateStateCVar then tabRow:AddEvaluateStateCVar("OldFriendsList_mode") end
 	end
 end
 
@@ -248,7 +280,7 @@ end
 local function AddSetupSection(layout)
 	if not CreateSettingsButtonInitializer then return end
 	AddHeader(layout, L["First-time setup"])
-	layout:AddInitializer(CreateSettingsButtonInitializer(L["Social window or separate window"], L["Run the setup again"],
+	layout:AddInitializer(CreateSettingsButtonInitializer(L["Social or separate window"], L["Run the setup again"],
 		function() if ns.Setup then ns.Setup.Show() end end,
 		L["Choose again: Old Friends List in the Social window or in a separate window."], false))
 end
@@ -269,12 +301,14 @@ local function Build()
 
 	Try(AddHeader, layout, L["General"])
 	Try(AddMinimapCheckbox)
-	Try(AddCheckbox, "shareZone", L["Share my zone with friends"],
+	Try(AddCheckbox, "shareZone", L["Share my zone"],
 		L["Tell friends who also use Old Friends List which zone you're in. Only people on your own list get it."])
+	Try(function()
+		Options.showOfflineSetting = AddCheckbox("showOffline", L["Show offline friends"],
+			L["Show friends who are offline in the list, in the Social window and in the separate window."], RefreshBothLists)
+	end)
 
-	Try(AddModeSection, layout)
-	Try(AddSocialSection, layout)
-	Try(AddSeparateSection, layout)
+	Try(AddWindowSection, layout)
 
 	Try(AddHeader, layout, L["List"])
 	Try(AddCheckbox, "showDetails", L["Show level and zone"],

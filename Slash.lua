@@ -48,10 +48,11 @@ local function Advanced()
 	Line("interval " .. L["<seconds>"], L["how often each friend is checked (15-300)"])
 	Line("minimap", L["show or hide the minimap button"])
 	Line("setup", L["show the first-time setup again"])
+	Line("showoffline on|off", L["offline friends in the lists"])
 	Line("ping " .. NAME, L["check one character now and print the result"])
-	Line("diag", L["check which game APIs this client has"])
+	Line("diag", L["information for bug reports"])
+	Line("diag mail", L["check the names suggested in the mail"])
 	Line("debug", L["toggle debug messages"])
-	Line("errors", L["error mode for bug reports: the game's taint log and Lua errors on screen (again to turn off)"])
 end
 
 local function Config()
@@ -61,6 +62,7 @@ local function Config()
 		L["offline messages"], OnOff(s.notifyOffline), L["sound"], OnOff(s.sound)))
 	print(("  %s: %s   %s: %ds   debug: %s"):format(L["share zone with friends"], OnOff(s.shareZone),
 		L["check interval"], s.pingInterval, OnOff(s.debug)))
+	print(("  %s: %s"):format(L["offline friends in the lists"], OnOff(s.showOffline ~= false)))
 	print(("  %s: %s"):format(L["key to open the list"], ns.Options.KeyText() or L["none (set one with /ofl config)"]))
 	local paused = Presence.PausedReason()
 	if paused then print("  " .. L["checks paused: %s"]:format(L[paused])) end
@@ -106,9 +108,6 @@ end
 -- the problems section: last, so it's what shows at the bottom of the chat (easy to screenshot)
 local function Problems()
 	Section("Problems")
-	-- first: is the game recording what this diag can't see (taint log, Lua errors on screen)?
-	Item("error mode (/ofl errors)", ("%s - taint log level %s, Lua errors on screen %s"):format(
-		OnOff(ns.db.settings.errorMode), tostring(ns.TaintLogLevel()), ns.ScriptErrorsShown() and "yes" or "no"))
 	-- actions the game blocked and blamed on this addon, this session
 	local blocked = {}
 	for func, b in pairs(ns.blocked) do
@@ -120,7 +119,12 @@ local function Problems()
 	local m = ns.actionMessages
 	if ns.ActionMessagesWatched() then
 		Item("\"action failed\" messages (any addon)", m.count > 0
-			and Bad(("%dx, last %s, from %s"):format(m.count, tostring(m.last), tostring(m.from or "?"))) or Good("none"))
+			and Bad(("%dx, last %s"):format(m.count, tostring(m.last))) or Good("none"))
+		if m.count > 0 then
+			-- the last one: where Blizzard showed it, and the first addon in the calls that led there
+			Item("  blocked in", tostring(m.blocked))
+			Item("  call started by", tostring(m.started))
+		end
 	else
 		Item("\"action failed\" messages (any addon)", GREY .. "can't be counted on this client|r")
 	end
@@ -152,6 +156,7 @@ local function Diag()
 		and ("on, %d of %d lists kept out of the controller's cursor"):format(hidden, toHide) or "off")
 	Item("keys", "O: " .. tostring(GetBindingAction(ns.SOCIAL_KEY)) .. ", Shift-O: " .. tostring(GetBindingAction(ns.DEFAULT_KEY)))
 	Item("name links", ns.UI.LinkInfo())
+	Item("offline friends", s.showOffline == false and "hidden" or "shown")
 	Item("debug", OnOff(s.debug))
 	for _, line in ipairs(UI.SocialIconInfo()) do Item("tab", line) end
 
@@ -250,28 +255,19 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		SetToggle("sound", L["sound"], rest)
 	elseif cmd == "zone" then
 		SetToggle("shareZone", L["share zone with friends"], rest)
+	elseif cmd == "showoffline" then
+		local arg = rest:lower()
+		local show
+		if arg == "on" then show = true
+		elseif arg == "off" then show = false
+		else show = ns.db.settings.showOffline == false end
+		ns.Options.SetShowOffline(show)
+		ns.Print("%s: %s", L["offline friends in the lists"], OnOff(show))
 	elseif cmd == "minimap" then
 		ns.MinimapButton.SetShown(ns.db.settings.minimapHidden and true or false)
 		if not ns.db.settings.minimapHidden then ns.Print(L["Minimap button shown."]) end
 	elseif cmd == "debug" then
 		SetToggle("debug", "debug", rest)
-	elseif cmd == "errors" then
-		local arg = rest:lower()
-		local on
-		if arg == "on" then on = true
-		elseif arg == "off" then on = false
-		else on = not ns.db.settings.errorMode end
-		local took = ns.SetErrorMode(on)
-		if on then
-			ns.Print(L["Error mode is on: taint log level %s, Lua errors on screen. Type /ofl errors again to turn it off."],
-				tostring(ns.TaintLogLevel()))
-			if not took then
-				ns.Print(L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."],
-					tostring(ns.TaintLogLevel()))
-			end
-		else
-			ns.Print(L["Error mode is off."])
-		end
 	elseif cmd == "interval" then
 		local n = tonumber(rest)
 		if not n or n < 15 or n > 300 then ns.Print(L["The interval must be 15 to 300 seconds."]) return end

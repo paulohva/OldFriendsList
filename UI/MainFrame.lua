@@ -17,6 +17,7 @@ local GREY = "|cff808080"
 
 local frame, scrollBox, listView, dataProvider, onlineText, emptyText
 local whisperButton, inviteButton, removeButton
+local NO_FRIENDS_TEXT   -- the empty list's text (1.3.0: or "No friends online." with offline hidden)
 local selectedKey
 local selectedBNet    -- the Battle.net friend's entry, when the selected row is one (not on the list)
 local BNET_COLOR = "|cff82c5ff"   -- Battle.net names, as the game colours them
@@ -761,12 +762,17 @@ end
 --------------------------------------------------------------------------------
 
 -- what the list shows: online first (Old Friends and, with the option on, Battle.net friends
--- not on the list, together by name), then offline Old Friends
+-- not on the list, together by name), then offline Old Friends (unless "show offline friends"
+-- is off, 1.3.0)
 function UI.Items()
 	local online, offline = {}, {}
+	local showOffline = ns.db.settings.showOffline ~= false
 	for _, key in ipairs(Data.Sorted()) do
-		local t = Data.status[key] == "online" and online or offline
-		t[#t + 1] = { key = key }
+		if Data.status[key] == "online" then
+			online[#online + 1] = { key = key }
+		elseif showOffline then
+			offline[#offline + 1] = { key = key }
+		end
 	end
 	local bnet = 0
 	if ns.db.settings.showBNet and ns.BattleNet then
@@ -792,6 +798,9 @@ function UI.Refresh()
 		if entry and not Data.Has(selectedKey) then selectedBNet = entry else selectedKey, selectedBNet = nil, nil end
 	elseif selectedKey and not Data.Has(selectedKey) then
 		selectedKey = nil
+	elseif selectedKey and ns.db.settings.showOffline == false and Data.status[selectedKey] ~= "online" then
+		-- (went offline with offline friends hidden: gone from the list, so not selected either)
+		selectedKey = nil
 	end
 
 	local online, total = Data.CountOnline()
@@ -799,7 +808,9 @@ function UI.Refresh()
 	frame.Stale:ClearAllPoints()
 	frame.Stale:SetPoint("LEFT", onlineText, "LEFT", onlineText:GetStringWidth() + 6, 0)
 	UI.UpdateStale(frame.Stale)
-	emptyText:SetShown(total == 0 and bnetCount == 0)
+	-- empty: no friends at all, or (offline hidden) none online
+	emptyText:SetText(total == 0 and NO_FRIENDS_TEXT or L["No friends online."])
+	emptyText:SetShown(#items == 0)
 	UpdateButtons()
 end
 
@@ -913,8 +924,9 @@ local function Build()
 	emptyText = inset:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	emptyText:SetPoint("CENTER", inset, "CENTER", 0, 20)
 	emptyText:SetWidth(260)
-	emptyText:SetText(L["No friends yet.\n\nClick |cffffd100%s|r, or right-click a player's portrait or name and choose |cffffd100%s|r."]:format(
-		L["Add Friend"], L["Add to Old Friends List"]))
+	NO_FRIENDS_TEXT = L["No friends yet.\n\nClick |cffffd100%s|r, or right-click a player's portrait or name and choose |cffffd100%s|r."]:format(
+		L["Add Friend"], L["Add to Old Friends List"])
+	emptyText:SetText(NO_FRIENDS_TEXT)
 
 	local add = MakeButton(frame, L["Add Friend"], 82, Actions.AddPrompt)
 	add:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 4)

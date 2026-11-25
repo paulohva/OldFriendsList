@@ -34,30 +34,18 @@ end
 local function ShowTooltip(self)
 	GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 	GameTooltip:AddLine(ns.NAME)
-	local online, total = Data.CountOnline()
-	GameTooltip:AddLine(L["%d of %d online"]:format(online, total), 1, 1, 1)
-	local shown = 0
-	for _, key in ipairs(Data.Sorted()) do
-		if Data.status[key] ~= "online" then break end
-		shown = shown + 1
-		if shown > 10 then GameTooltip:AddLine("...", 0.6, 0.6, 0.6) break end
-		local f = Data.Get(key)
-		local c = Data.ClassColor(f.class)
-		GameTooltip:AddDoubleLine(Data.Display(key), f.lastZone or "", c and c.r or 1, c and c.g or 1, c and c.b or 1, 0.7, 0.7, 0.7)
-	end
-	GameTooltip:AddLine(" ")
 	GameTooltip:AddLine(L["Left-click: open the list"], 0.5, 0.5, 0.5)
 	GameTooltip:AddLine(L["Right-click: options"], 0.5, 0.5, 0.5)
 	GameTooltip:Show()
 end
 
--- right-click: just the list, the options (everything else lives there) and hiding the button
+-- right-click: the options (everything else lives there) and hiding the button (left-click opens
+-- the list, so it isn't repeated here, 1.3.0)
 local function OpenOptions(self)
 	if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
 	MenuUtil.CreateContextMenu(self, function(_, root)
 		root:CreateTitle(ns.NAME)
-		root:CreateButton(L["Open the list"], function() ns.UI.Toggle() end)
-		root:CreateButton(L["Settings and key binding..."], function() ns.Options.Open() end)
+		root:CreateButton(ns.G("SETTINGS", "Settings"), function() ns.Options.Open() end)
 		root:CreateButton(L["Hide minimap button"], function() MinimapButton.SetShown(false) end)
 	end)
 end

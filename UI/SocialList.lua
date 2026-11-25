@@ -268,17 +268,22 @@ end
 
 -- Old Friends to show: online first, filtered by the search box; with "hide friends already
 -- shown by Battle.net" on, not those a Battle.net friend is playing right now (Blizzard's own
--- card shows them, just below)
+-- card shows them, just below); with "show offline friends" off (1.3.0), only those online.
+-- Returns the keys shown, how many are online, and how many match in all (offline included:
+-- the header's "3/6")
 function SocialList.Keys(search)
-	local keys, online = {}, 0
+	local keys, online, total = {}, 0, 0
 	local hideBNet = ns.db.settings.hideBNetDuplicates and ns.BattleNet
+	local showOffline = ns.db.settings.showOffline ~= false
 	for _, key in ipairs(Data.Sorted()) do
 		if (search == "" or key:lower():find(search, 1, true)) and not (hideBNet and ns.BattleNet.Get(key)) then
-			keys[#keys + 1] = key
-			if Data.status[key] == "online" then online = online + 1 end
+			total = total + 1
+			local isOnline = Data.status[key] == "online"
+			if isOnline then online = online + 1 end
+			if isOnline or showOffline then keys[#keys + 1] = key end
 		end
 	end
-	return keys, online
+	return keys, online, total
 end
 
 -- the section's height for n friends (header only when collapsed). With no friends to show it's
@@ -308,17 +313,17 @@ local function LayoutTwoScrolls()
 		return
 	end
 	local search = SearchText()
-	local keys, online = SocialList.Keys(search)
+	local keys, online, total = SocialList.Keys(search)
 	local collapsed = ns.db.settings.socialCollapsed and true or false
 	-- (an empty list keeps its header, for the "+"; a search with no match hides it)
-	local height = SocialList.SectionHeight(#keys, collapsed, search == "")
+	local height = SocialList.SectionHeight(#keys, collapsed, search == "" or total > 0)
 	if height == 0 then
 		section:Hide()
 		MoveBlizzardList(0)
 		return
 	end
 
-	local text = L["Old Friends List %d/%d"]:format(online, #keys)
+	local text = L["Old Friends List %d/%d"]:format(online, total)
 	if header.SetText then header:SetText(text) end
 	if header.ButtonText then header.ButtonText:SetText(text) end
 	SetCollapseIcon(collapsed)
@@ -477,13 +482,13 @@ local function LayoutSingleScroll()
 		return
 	end
 	local search = SearchText()
-	local keys, online = SocialList.Keys(search)
+	local keys, online, total = SocialList.Keys(search)
 	local collapsed = ns.db.settings.socialCollapsed and true or false
 	-- (an empty list keeps its header, for the "+"; a search with no match hides it)
-	sectionHeight = SocialList.SectionHeight(#keys, collapsed, search == "")
+	sectionHeight = SocialList.SectionHeight(#keys, collapsed, search == "" or total > 0)
 	if not Engage() then return end
 	if sectionHeight > 0 then
-		local text = L["Old Friends List %d/%d"]:format(online, #keys)
+		local text = L["Old Friends List %d/%d"]:format(online, total)
 		if header.SetText then header:SetText(text) end
 		if header.ButtonText then header.ButtonText:SetText(text) end
 		SetCollapseIcon(collapsed)
@@ -515,16 +520,16 @@ local function LayoutControllerList()
 		return
 	end
 	local search = SearchText()
-	local keys, online = SocialList.Keys(search)
+	local keys, online, total = SocialList.Keys(search)
 	local collapsed = ns.db.settings.socialCollapsed and true or false
-	local height = SocialList.SectionHeight(#keys, collapsed, search == "")
+	local height = SocialList.SectionHeight(#keys, collapsed, search == "" or total > 0)
 	if height == 0 then
 		section:Hide()
 		MoveBlizzardList(0)
 		return
 	end
 
-	local text = L["Old Friends List %d/%d"]:format(online, #keys)
+	local text = L["Old Friends List %d/%d"]:format(online, total)
 	if header.SetText then header:SetText(text) end
 	if header.ButtonText then header.ButtonText:SetText(text) end
 	SetCollapseIcon(collapsed)
@@ -660,7 +665,24 @@ local function BuildHeader()
 	-- statuses may be out of date (in a dungeon...): the separate window's clock, left of the "+"
 	h.Stale = UI.CreateStaleIcon(h, 16)
 	h.Stale:SetPoint("RIGHT", add, "LEFT", -6, 0)
-	h:SetScript("OnClick", function()
+	-- right-click (1.3.0): a small menu to the options (where "show offline friends" lives), like the
+	-- minimap button's; left-click collapses or opens the group, as before
+	h:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	h:SetScript("OnClick", function(self, mouse)
+		if mouse == "RightButton" then
+			local function Open()
+				if not (ns.Options and ns.Options.Open()) then ns.Print(L["The options panel isn't available; type /ofl help."]) end
+			end
+			if MenuUtil and MenuUtil.CreateContextMenu then
+				MenuUtil.CreateContextMenu(self, function(_, root)
+					root:CreateTitle(ns.NAME)
+					root:CreateButton(ns.G("SETTINGS", "Settings"), Open)
+				end)
+			else
+				Open()
+			end
+			return
+		end
 		ns.db.settings.socialCollapsed = not ns.db.settings.socialCollapsed
 		if PlaySound and SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
 			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
