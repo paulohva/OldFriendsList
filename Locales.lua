@@ -233,8 +233,10 @@ if locale == "ptBR" then
 	L["information for bug reports"] = "informações para relatar bugs"
 	L["check the names suggested in the mail"] = "verifica os nomes sugeridos no correio"
 	L["toggle debug messages"] = "liga ou desliga as mensagens de depuração"
-	L["Super debug is on: taint log level %s, Lua errors on screen, debug messages. Type /ofl enablesuperdebug again to turn it all off."] =
-		"Super debug ligado: registro de taint nível %s, erros Lua na tela, mensagens de depuração. Digite /ofl enablesuperdebug de novo para desligar tudo."
+	L["Super debug is on: taint log level %s, Lua errors on screen. Type /ofl enablesuperdebug again to turn it off."] =
+		"Super debug ligado: registro de taint nível %s, erros Lua na tela. Digite /ofl enablesuperdebug de novo para desligar."
+	L["Super debug is on: taint log level %s, Lua errors on screen, debug messages in chat. Type /ofl enablesuperdebug again to turn it all off."] =
+		"Super debug ligado: registro de taint nível %s, erros Lua na tela, mensagens de depuração no chat. Digite /ofl enablesuperdebug de novo para desligar tudo."
 	L["Super debug is off: everything is back as it was."] = "Super debug desligado: tudo voltou ao que era."
 	L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."] =
 		"O jogo não aceitou a configuração do registro de taint (agora %s). Use /console taintLog 2."
