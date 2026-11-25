@@ -4,6 +4,16 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.3.1
+
+- **Fix:** typing in the game's Options search could make the game block an action
+  (`IsUserOAuthed()`, Discord) and blame Old Friends List. The **Blizzard Social** settings in the
+  options are always shown again (their tooltips say they're for the Social window).
+- **Fix:** when the server lagged, an offline friend could show "has come online" and then
+  "has gone offline" a few seconds later, with "No player named '…' is currently playing." in
+  chat. Before saying an offline friend came online, Old Friends List now checks once more, and
+  a late "No player named" answer stays hidden.
+
 ## 1.3.0
 
 - **New:** hide offline friends: turn off **Show offline friends** in the options (Options >

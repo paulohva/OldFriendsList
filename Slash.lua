@@ -108,6 +108,12 @@ end
 -- the problems section: last, so it's what shows at the bottom of the chat (easy to screenshot)
 local function Problems()
 	Section("Problems")
+	-- only while /ofl enablesuperdebug is on (it isn't listed anywhere else)
+	if ns.db.settings.superDebug then
+		Item("super debug", ("%s%s - taint log level %s, Lua errors on screen %s, debug messages %s"):format(OnOff(true),
+			ns.db.settings.superDebugAll and " (all)" or "", tostring(ns.TaintLogLevel()),
+			ns.ScriptErrorsShown() and "yes" or "no", OnOff(ns.db.settings.debug)))
+	end
 	-- actions the game blocked and blamed on this addon, this session
 	local blocked = {}
 	for func, b in pairs(ns.blocked) do
@@ -268,6 +274,24 @@ SlashCmdList.OLDFRIENDSLIST = function(input)
 		if not ns.db.settings.minimapHidden then ns.Print(L["Minimap button shown."]) end
 	elseif cmd == "debug" then
 		SetToggle("debug", "debug", rest)
+	elseif cmd == "enablesuperdebug" then
+		-- (not in the help or /ofl advanced: for us, when hunting a bug; see Core.lua)
+		-- "all": also the debug messages in chat (turns it on, or adds them if it's already on)
+		local arg = rest:lower()
+		local on, all = nil, arg == "all"
+		if arg == "on" or all then on = true
+		elseif arg == "off" then on = false
+		else on = not ns.db.settings.superDebug end
+		local took = ns.SetSuperDebug(on, all)
+		if on then
+			ns.SuperDebugMessage()
+			if not took then
+				ns.Print(L["The game didn't accept the taint log setting (now %s). Use /console taintLog 2 instead."],
+					tostring(ns.TaintLogLevel()))
+			end
+		else
+			ns.Print(L["Super debug is off: everything is back as it was."])
+		end
 	elseif cmd == "interval" then
 		local n = tonumber(rest)
 		if not n or n < 15 or n > 300 then ns.Print(L["The interval must be 15 to 300 seconds."]) return end
