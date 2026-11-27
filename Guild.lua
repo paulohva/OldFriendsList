@@ -27,6 +27,11 @@ function Guild.AlertsOn()
 	return Safe.Call(GetCVarBool, "guildMemberNotify")
 end
 
+-- in a guild, with a rank that can invite (the game's check for its guild window's Add Member)
+function Guild.CanInvite()
+	return Guild.InGuild() and Safe.Call(CanGuildInvite) == true
+end
+
 function Guild.IsMember(key)
 	return members[key] == true
 end

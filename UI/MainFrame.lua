@@ -480,15 +480,39 @@ local function BuildDialog()
 	return d
 end
 
--- o: text, accept, cancel (button texts); editText (nil: no edit box), maxLetters, wide;
--- onAccept(text) (text: the edit box's, when there is one)
+-- o: text, accept, cancel (button texts; no cancel: one button, centred); editText (nil: no edit
+-- box), maxLetters, wide; onAccept(text) (text: the edit box's, when there is one); copy: the box
+-- only holds editText to copy (typing doesn't change it; Ctrl+C copies and closes)
 function UI.ShowDialog(o)
 	dialog = dialog or BuildDialog()
 	local d = dialog
 	d:Hide()
 	d.Text:SetText(o.text)
 	d.Button1:SetText(o.accept)
-	d.Button2:SetText(o.cancel)
+	d.Button2:SetText(o.cancel or "")
+	d.Button2:SetShown(o.cancel ~= nil)
+	d.Button1:ClearAllPoints()
+	if o.cancel then
+		d.Button1:SetPoint("BOTTOMRIGHT", d, "BOTTOM", -6, 16)
+	else
+		d.Button1:SetPoint("BOTTOM", d, "BOTTOM", 0, 16)
+	end
+	local box = d.EditBox
+	if o.copy then
+		box:SetScript("OnTextChanged", function(self, userInput)
+			if userInput then
+				self:SetText(o.editText)
+				self:HighlightText()
+			end
+		end)
+		box:SetScript("OnKeyDown", function(_, key)
+			-- (closed a frame later: the copy happens first)
+			if key == "C" and IsControlKeyDown() then C_Timer.After(0, function() d:Hide() end) end
+		end)
+	else
+		box:SetScript("OnTextChanged", nil)
+		box:SetScript("OnKeyDown", nil)
+	end
 	local hasBox = o.editText ~= nil
 	d.EditBox:SetShown(hasBox)
 	d.EditBox:SetWidth(o.wide and 270 or 240)
@@ -551,6 +575,31 @@ local function ShowTooltip(row)
 	GameTooltip:Show()
 end
 
+--------------------------------------------------------------------------------
+-- Invite to Guild. Only Blizzard's own interface may call C_GuildInfo.Invite: an addon is
+-- blocked, and so are macros, secure buttons and text an addon writes into the chat box. The
+-- game's /ginvite, pasted and sent by you, is the game's own code. The clipboard is closed to
+-- addons too (CopyToClipboard): a window shows "/ginvite Name" selected, and Ctrl+C copies it.
+--------------------------------------------------------------------------------
+
+function Actions.GuildInvite(key)
+	local name = Data.Display(key)
+	UI.ShowDialog({
+		text = L["To invite %s to your guild, press Ctrl+C to copy the command and paste it in the chat (Enter, Ctrl+V, Enter)."]:format(name),
+		accept = G("CLOSE", "Close"),
+		editText = "/ginvite " .. name, wide = true, copy = true,
+		onAccept = function() end,
+	})
+end
+
+-- Invite to Guild: only with a rank that can invite, and not for someone already in the guild;
+-- greyed out while they're offline (the invite needs them online)
+local function AddGuildInvite(root, key, online)
+	if not ns.Guild.CanInvite() or ns.Guild.IsMember(key) then return end
+	local item = root:CreateButton(L["Invite to Guild"], function() Actions.GuildInvite(key) end)
+	if not online and item and item.SetEnabled then item:SetEnabled(false) end
+end
+
 local function OpenRowMenu(row)
 	local key = row.key
 	if not (key and MenuUtil and MenuUtil.CreateContextMenu) then return end
@@ -558,6 +607,7 @@ local function OpenRowMenu(row)
 		root:CreateTitle(Data.Display(key))
 		root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(key) end)
 		root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(key) end)
+		AddGuildInvite(root, key, Data.status[key] == "online")
 		root:CreateButton(G("WHO", "Who"), function() Actions.Who(key) end)
 		root:CreateButton(G("SET_NOTE", "Set Note"), function() Actions.SetNote(key) end)
 		root:CreateDivider()
@@ -656,6 +706,7 @@ local function OpenBNetMenu(row)
 		if Reachable(entry) then
 			root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(entry.key) end)
 			root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(entry.key) end)
+			AddGuildInvite(root, entry.key, true)
 			root:CreateButton(G("WHO", "Who"), function() Actions.Who(entry.key) end)
 			root:CreateDivider()
 			root:CreateButton(L["Add to Old Friends List"], function()

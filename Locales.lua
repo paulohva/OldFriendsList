@@ -67,6 +67,8 @@ if locale == "ptBR" then
 	L["%d days ago"] = "há %d dias"
 
 	-- right-click menus
+	L["Invite to Guild"] = "Convidar para a guilda"
+	L["To invite %s to your guild, press Ctrl+C to copy the command and paste it in the chat (Enter, Ctrl+V, Enter)."] = "Para convidar %s para a guilda, aperte Ctrl+C para copiar o comando e cole no chat (Enter, Ctrl+V, Enter)."
 	L["Add to Old Friends List"] = "Adicionar à Old Friends List"
 	L["Remove from Old Friends List"] = "Remover da Old Friends List"
 

@@ -194,6 +194,7 @@ local function Diag()
 		{ "ERR_CHAT_PLAYER_NOT_FOUND_S", ERR_CHAT_PLAYER_NOT_FOUND_S },
 		{ "send tell", (ChatFrameUtil and ChatFrameUtil.SendTell) or ChatFrame_SendTell },
 		{ "C_PartyInfo.InviteUnit", C_PartyInfo and C_PartyInfo.InviteUnit },
+		{ "guild invite (/ginvite)", SlashCmdList and SlashCmdList.GUILD_INVITE },
 		{ "Menu.ModifyMenu", Menu and Menu.ModifyMenu },
 		{ "MenuUtil.CreateContextMenu", MenuUtil and MenuUtil.CreateContextMenu },
 		{ "C_FriendList.SendWho", C_FriendList and C_FriendList.SendWho },

@@ -4,6 +4,14 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.3.3
+
+- **New:** right-click a friend: **Invite to Guild**, when you're in a guild and your rank can
+  invite. A small window opens with `/ginvite Name` selected: Ctrl+C copies it (and closes the
+  window), then paste it in the chat (Enter, Ctrl+V, Enter). The game only takes guild invites
+  from its own chat, and keeps the clipboard to itself. Not shown for friends already in your
+  guild; greyed out while they're offline.
+
 ## 1.3.2
 
 - **Fix:** with a friend's right-click menu open, moving the mouse over the menu lit up the friend

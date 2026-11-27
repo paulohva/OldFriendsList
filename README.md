@@ -20,7 +20,7 @@ It works with any character, whether or not they use the addon.
   last known level and class for friends who are offline. Offline friends can be hidden, with an
   option.
 - **One-click actions.** Double-click a friend to whisper them; use the buttons or the right-click
-  menu to **Invite**, **Who**, **Set Note** or **Remove**.
+  menu to **Invite**, **Invite to Guild**, **Who**, **Set Note** or **Remove**.
 - **Login and logout notifications.** A chat line and a sound when a friend comes online, a line
   when they go offline.
 - **Shortcut and options.** **Shift-O** opens the list. The gear in the window (or `/ofl config`)
