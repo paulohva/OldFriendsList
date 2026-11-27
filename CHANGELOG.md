@@ -4,6 +4,11 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.3.3
+
+- **New:** right-click a friend: **Invite to Guild**, when you're in a guild and your rank can
+  invite. Not shown for friends already in your guild; greyed out while they're offline.
+
 ## 1.3.2
 
 - **Fix:** with a friend's right-click menu open, moving the mouse over the menu lit up the friend

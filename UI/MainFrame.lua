@@ -337,6 +337,12 @@ function Actions.Invite(key)
 	if invite then invite(Data.Display(key)) end
 end
 
+-- the same call as the guild window's Add Member; the game writes the result in the chat
+function Actions.GuildInvite(key)
+	local invite = (C_GuildInfo and C_GuildInfo.Invite) or GuildInvite
+	if invite then invite(Data.Display(key)) end
+end
+
 -- a Battle.net whisper to a Battle.net friend (works across factions, realm types and regions):
 -- the game's own Battle.net name link in chat, as it writes them ("BNplayer:name:id:...")
 function Actions.WhisperBNet(entry)
@@ -551,6 +557,14 @@ local function ShowTooltip(row)
 	GameTooltip:Show()
 end
 
+-- Invite to Guild: only with a rank that can invite, and not for someone already in the guild;
+-- greyed out while they're offline (the invite needs them online)
+local function AddGuildInvite(root, key, online)
+	if not ns.Guild.CanInvite() or ns.Guild.IsMember(key) then return end
+	local button = root:CreateButton(L["Invite to Guild"], function() Actions.GuildInvite(key) end)
+	if not online and button and button.SetEnabled then button:SetEnabled(false) end
+end
+
 local function OpenRowMenu(row)
 	local key = row.key
 	if not (key and MenuUtil and MenuUtil.CreateContextMenu) then return end
@@ -558,6 +572,7 @@ local function OpenRowMenu(row)
 		root:CreateTitle(Data.Display(key))
 		root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(key) end)
 		root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(key) end)
+		AddGuildInvite(root, key, Data.status[key] == "online")
 		root:CreateButton(G("WHO", "Who"), function() Actions.Who(key) end)
 		root:CreateButton(G("SET_NOTE", "Set Note"), function() Actions.SetNote(key) end)
 		root:CreateDivider()
@@ -656,6 +671,7 @@ local function OpenBNetMenu(row)
 		if Reachable(entry) then
 			root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(entry.key) end)
 			root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(entry.key) end)
+			AddGuildInvite(root, entry.key, true)
 			root:CreateButton(G("WHO", "Who"), function() Actions.Who(entry.key) end)
 			root:CreateDivider()
 			root:CreateButton(L["Add to Old Friends List"], function()
