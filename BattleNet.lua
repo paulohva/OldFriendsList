@@ -1,18 +1,11 @@
 --------------------------------------------------------------------------------
 -- Battle.net friends playing this game right now, and the character each one is on.
---  * Always: an Old Friend who is a Battle.net friend's current character is online, with
---    level, class and zone, straight away and even on the other faction (no pings for them).
---    When the Battle.net friend logs off or switches character, that Old Friend is checked
---    again at once (a ping tells whether they're still on).
---  * Options: hide those friends from the group in the Social window (hideBNetDuplicates), and
---    list the other Battle.net friends in the separate window (showBNet).
---  * 1.0.2: the other Battle.net friends (not on the list) logging in and out of this game get
---    a chat line too (notifyBNet, see BattleNet.ShouldNotify); Old Friends keep their own line.
---    Friends playing in another region are shown too, with a chat line, but only a Battle.net
---    whisper reaches them (no invite, Who or adding them: names repeat across regions).
---  * 1.0.3: the same for characters on another realm type (PvP / PvE / RP / RP-PvP, see
---    Data.RealmType): Battle.net whisper only.
--- Everything is read with ns.Safe (values the game keeps secret count as unknown).
+--  * An Old Friend who is a Battle.net friend's current character is online at once, with level,
+--    class and zone (no pings); when they log off or switch, that Old Friend is checked again.
+--  * Options: hide them from the Social window's group (hideBNetDuplicates); list the other
+--    Battle.net friends in the separate window (showBNet); chat lines for them (notifyBNet).
+--  * Another region or realm type: shown, but only a Battle.net whisper reaches them.
+-- Everything is read with ns.Safe (secret values count as unknown).
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -74,10 +67,8 @@ local function Entry(account, game)
 	}
 end
 
--- every Battle.net friend's character online in this game, by key: in this region, and in
--- another region (shown in the separate window only to chat with them)
--- one Battle.net friend (by index): their characters into found / far. Returns their account id
--- (nil when the game doesn't say)
+-- every Battle.net friend's character online in this game, by key, in this region (found) and in
+-- another (far). One friend (by index): their characters into found / far; returns their account id
 local function ReadAccount(i, found, far)
 	local account = Safe.Call(C_BattleNet.GetFriendAccountInfo, i)
 	if type(account) ~= "table" then return nil end
@@ -112,9 +103,8 @@ local function Read()
 	return found, far
 end
 
--- (1.2.0) only some friends changed (BN_FRIEND_INFO_CHANGED says which, by index): read just
--- them, and keep everyone else's characters as they were. Reading every friend each time was
--- the addon's most expensive call. Anything unclear (an id the game doesn't give): read all.
+-- only some friends changed (BN_FRIEND_INFO_CHANGED gives indices): read just them and keep the
+-- rest (reading every friend was the addon's most expensive call). Anything unclear: read all.
 local function ReadChanged(indices)
 	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo) then return Read() end
 	local fresh, freshFar, changed = {}, {}, {}
@@ -137,8 +127,7 @@ local function ReadChanged(indices)
 	return found, far
 end
 
--- the first read after logging in (or after Battle.net comes back) only learns who's on: no
--- "has come online" for everyone at once
+-- the first read after login (or a Battle.net reconnection) only learns who's on: no lines
 local primed
 
 -- `indices`: only these friends changed (see ReadChanged); nil: read every friend
@@ -160,9 +149,8 @@ local function Update(indices)
 		return
 	end
 	far = far or {}
-	-- Battle.net friends not on the list, logging in or out of this game (or switching
-	-- character: the old one goes, the new one comes), in this region or another one.
-	-- Old Friends get their own lines.
+	-- Battle.net friends not on the list logging in or out of this game (a character switch: the old
+	-- one goes, the new one comes); Old Friends get their own lines
 	local Notify = ns.Notify
 	if primed and Notify then
 		-- (who left first: a character switch reads "old one offline, new one online")
@@ -239,8 +227,7 @@ function BattleNet.Shown(key)
 	return key and (online[key] or elsewhere[key])
 end
 
--- Battle.net friends' characters online in this game, not on the Old Friends List, by name;
--- also the ones in another region
+-- Battle.net friends' characters online in this game, not on the list, by name (other regions too)
 function BattleNet.Others()
 	local out = {}
 	for key, e in pairs(online) do
@@ -260,8 +247,8 @@ function BattleNet.ShortTag(entry)
 	return type(tag) == "string" and tag:match("^[^#]+") or nil
 end
 
--- announce Battle.net friends (not on the list) logging in and out? Only where they're part of
--- what you see: Old Friends List in the Social window, or Battle.net friends in the separate window
+-- announce Battle.net friends (not on the list)? Only where they're part of what you see: Old
+-- Friends List in the Social window, or Battle.net friends in the separate window
 function BattleNet.ShouldNotify()
 	local s = ns.db and ns.db.settings
 	return s and s.notifyBNet and (s.socialMode == "integrated" or s.showBNet) and true or false
@@ -273,9 +260,8 @@ function BattleNet.SameFaction(e)
 	return not (e and e.faction and mine) or e.faction == mine
 end
 
--- can you whisper them by name, invite them, look them up with Who, add them to the list?
--- Not on the other faction, another realm type (PvP / PvE / RP...) nor in another region:
--- there, only a Battle.net whisper
+-- whisper by name, invite, Who, add to the list? Not on the other faction, another realm type or
+-- region: there, only a Battle.net whisper
 function BattleNet.Reachable(e)
 	return not (e and e.otherRegion) and BattleNet.SameFaction(e) and Data.SameRealmType(e and e.realmType)
 end

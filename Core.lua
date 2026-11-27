@@ -113,8 +113,7 @@ function ns.On(event, fn)
 	table.insert(handlers[event], fn)
 end
 
--- (1.2.6) script errors in this addon's own code, kept for /ofl diag (the last one and a count),
--- then passed to the game's error handler as always. Costs nothing until an error happens.
+-- script errors in this addon's own code, kept for /ofl diag, then passed to the game's handler
 ns.scriptErrors = { count = 0 }
 local function KeepError(err)
 	local e = ns.scriptErrors
@@ -126,8 +125,7 @@ local function ReportError(err)
 end
 ns.ReportError = ReportError
 
--- an error this addon catches on purpose and keeps quiet (a part that can fail without bothering
--- the player): kept for /ofl diag all the same, and said in chat with /ofl debug on
+-- an error caught on purpose and kept quiet: kept for /ofl diag, said in chat with /ofl debug
 function ns.QuietError(where, err)
 	KeepError(where .. ": " .. tostring(err))
 	ns.Debug("%s: %s", where, tostring(err))
@@ -155,18 +153,14 @@ local function OnBlocked(event, addon, func)
 	if ns.L then ns.Print(ns.L["The game blocked an action (%s). Please report it with the output of /ofl diag."], func) end
 end
 
--- "Interface action failed because of an AddOn" messages (1.2.6): Blizzard's own code shows these
--- directly when it finds itself tainted (the controller's navigation, for one), with no
--- ADDON_ACTION_BLOCKED event, so the watcher above never sees them, and they don't say which addon.
--- Counted for /ofl diag, with where they came from. A secure post-hook: it runs after Blizzard's
--- function, changes nothing, and only runs when the message is shown (never, in normal play).
--- No taint log or Lua error setting needed: the call stack is read right then.
+-- "Interface action failed because of an AddOn": Blizzard's code shows it directly when it finds
+-- itself tainted (no ADDON_ACTION_BLOCKED, no addon name). Counted for /ofl diag with where it came
+-- from, by a secure post-hook that only runs when the message shows. No taint log needed.
 ns.actionMessages = { count = 0 }
 local messageHooked
 
--- From a call stack (debugstack's text): the Blizzard function that showed the message, and the
--- first addon (not Blizzard's) in the calls that led to it. That addon *called*; it isn't
--- necessarily the one that tainted (Blizzard code reading something tainted shows no addon).
+-- From a call stack: the Blizzard function that showed the message, and the first addon in the
+-- calls that led there. That addon *called*; it isn't necessarily the one that tainted.
 -- Pure, for tests: (blocked, started)
 local SKIP_FUNCTIONS = { DisplayInterfaceActionBlockedMessage = true, EnsureIsSecure = true }
 
@@ -232,11 +226,9 @@ function ns.GamepadUI()
 	return ok and style == Enum.InputDeviceInterfaceType.Gamepad or false
 end
 
--- Frames kept out of the controller's navigation: its cursor reads the scroll boxes it moves
--- through, and ours (made and filled by this addon) taint it, so it shows "Interface action
--- failed because of an AddOn" and stops. Blizzard's own way (SmartNavigation_MarkFrameIgnored,
--- which covers the frame's children too), done out of combat, as it allows addons then, and only
--- while the controller interface is on.
+-- Frames kept out of the controller's cursor: it reads the scroll boxes it moves through, and ours
+-- taint it ("action failed"). Blizzard's own SmartNavigation_MarkFrameIgnored (children too),
+-- only out of combat and with the controller interface on.
 local controllerHidden, hiddenDone = {}, {}
 function ns.ApplyControllerHiding()
 	if not ns.GamepadUI() or type(SmartNavigation_MarkFrameIgnored) ~= "function" then return end
@@ -295,15 +287,13 @@ ns.On("ADDON_LOADED", function(name)
 		db.settings.socialIcon = false
 		db.version = 3
 	end
-	-- 0.3.0: Social window integration; the defaults (separate window, setup not done yet)
-	-- come from DEFAULTS below, so updating players also get the first-time setup
+	-- 0.3.0: Social window integration; updating players also get the first-time setup
 	if db.version < 4 then
 		-- an existing install: the setup says clearly that nothing changes unless they choose it
 		db.settings.setupFromUpdate = true
 		db.version = 4
 	end
-	-- 1.0.2: Battle.net friends' login lines are off for everyone until turned on in the options
-	-- (test builds had them on)
+	-- 1.0.2: Battle.net friends' login lines are off until turned on in the options
 	if db.version < 5 then
 		db.settings.notifyBNet = false
 		db.version = 5
@@ -318,15 +308,10 @@ ns.On("ADDON_LOADED", function(name)
 end)
 
 --------------------------------------------------------------------------------
--- /ofl enablesuperdebug (1.3.1; not in the help or /ofl advanced: it's for us, when hunting a
--- bug). The game's own logs, in one switch:
---  - its taint log (_forever_/Logs/taint.log) at level 2: who tainted what, and where;
---  - Lua errors on screen ("scriptErrors").
--- "/ofl enablesuperdebug all" also turns on this addon's debug messages in chat (/ofl debug:
--- pings and the rest). Typed again (or "off"): everything back to what the player had before.
--- While it's on, every login and /reload turns it off and on again (the game forgets the taint
--- log when it closes) and says so once in chat, so it's never left on by mistake. Off, the
--- default: the addon doesn't touch any of these.
+-- /ofl enablesuperdebug (not listed anywhere: for us, when hunting a bug): the game's taint log
+-- (level 2) and Lua errors on screen; "all" also our debug messages in chat. Typed again (or
+-- "off"): the player's own values back. While on, every login and /reload turns it off and on
+-- again (the taint log doesn't survive a restart) and says so once. Off: nothing is touched.
 --------------------------------------------------------------------------------
 
 local TAINT_LEVEL = "2"
@@ -344,9 +329,8 @@ end
 function ns.TaintLogLevel() return GetCVarValue("taintLog") end
 function ns.ScriptErrorsShown() return GetCVarValue("scriptErrors") == "1" end
 
--- everything off, then everything on again: the taint log (restarts at the level), Lua errors on
--- screen and, with "all", the debug messages. True if the game took the taint log (some clients
--- may refuse it).
+-- everything off, then on again (with "all", the debug messages too). True if the game took the
+-- taint log.
 local function SuperDebugOn()
 	local s = ns.db.settings
 	SetCVarValue("taintLog", "0")
@@ -371,7 +355,7 @@ function ns.SetSuperDebug(on, all)
 		return SuperDebugOn()
 	end
 	local before = s.superDebugBefore or {}
-	-- (the debug messages only go back if "all" turned them on; otherwise they're the player's)
+	-- (the debug messages go back only if "all" turned them on)
 	if s.superDebugAll then s.debug = before.debug or false end
 	s.superDebug, s.superDebugAll, s.superDebugBefore = false, nil, nil
 	SetCVarValue("scriptErrors", before.scriptErrors or "0")
@@ -395,8 +379,8 @@ local function ApplySuperDebug()
 	ns.SuperDebugMessage()
 end
 
--- /ofl errors (1.2.6) was taken out in 1.3.0: for whoever upgrades with it still on, once, the
--- player's own "scriptErrors" goes back to what it was, the taint log off, and the two saved fields go
+-- 1.2.6's /ofl errors, removed in 1.3.0: for whoever upgrades with it still on, once, the player's
+-- own "scriptErrors" back, the taint log off, the saved fields gone
 local function ForgetErrorMode()
 	local s = ns.db and ns.db.settings
 	if not s then return end

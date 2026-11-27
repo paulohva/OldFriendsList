@@ -1,11 +1,6 @@
 --------------------------------------------------------------------------------
--- First-time setup: how to see your Old Friends.
---  * "In the Social window (O)": a group above Favorites in the game's friends window
---    (Shift-O still opens the separate window);
---  * "Separate window": our own window with Shift-O, optionally swapping keys so O opens
---    Old Friends List and Shift-O the game's Social window.
--- Shown once, a few seconds after the first login with 0.3.0 (closing it keeps the separate
--- window). Again with /ofl setup or the button in the options.
+-- First-time setup: Old Friends List in the Social window (O) or in a separate window (Shift-O,
+-- optionally swapping the keys). Shown once after the first login; again with /ofl setup.
 --------------------------------------------------------------------------------
 
 local _, ns = ...

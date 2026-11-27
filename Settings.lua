@@ -190,15 +190,11 @@ local function AddHeader(layout, text)
 	end
 end
 
--- A button to the game's Key Bindings, where our binding and the Social window's live.
--- Not Blizzard's own key binding rows (CreateKeybindingEntryInitializer): built from
--- addon code they carry addon-made functions and search tags, and the Options search
--- runs those on every keystroke. That tainted the search, so the game blocked its next
--- protected action and blamed Old Friends List. For the same reason nothing in this
--- panel adds search tags (addSearchTags = false), and no row has a "shown" condition
--- (AddShownPredicate): the search calls every row's ShouldShow() on every keystroke, in every
--- category. 1.3.0 had one ("Blizzard Social" only with the list in it): typing in the search
--- tainted it, and the Discord button's C_Discord.IsUserOAuthed() was blocked and blamed on us.
+-- A button to the game's Key Bindings. Keep addon functions out of anything the Options search
+-- runs: it runs every category's rows on each keystroke, so ours taint it and the game blocks its
+-- next protected call and blames us. Hence: no Blizzard keybinding rows (0.3.7), no search tags
+-- (addSearchTags = false), no AddShownPredicate (1.3.0 had one: the Discord button's
+-- C_Discord.IsUserOAuthed() got blocked).
 local function AddKeybindingButton(layout)
 	if not CreateSettingsButtonInitializer then return end
 	layout:AddInitializer(CreateSettingsButtonInitializer(L["Open or close the list"], ns.G("KEY_BINDINGS", "Key Bindings"),
@@ -210,12 +206,10 @@ local function AddKeybindingButton(layout)
 end
 
 
--- Where to show the list (1.3.0): the choice (a dropdown, like the setup's two cards), then each
--- window's settings under its own title ("Blizzard Social", "Old Friends List window"; no keys in
--- them, since the player can change those). Both always shown (1.3.1: see AddKeybindingButton
--- for why there's no "shown only with ..." condition); the tooltips say which window each one is
--- for. Names short enough for Blizzard's label column (about 26 letters in pt-BR). Built through
--- Blizzard's own paths, like the checkboxes.
+-- Where to show the list: the choice (a dropdown, like the setup's two cards), then each window's
+-- settings under its own title (no keys in titles: they can be changed). Both always shown (see
+-- AddKeybindingButton); the tooltips say which window each one is for. Names short enough for
+-- Blizzard's label column (about 26 letters in pt-BR).
 local function AddWindowSection(layout)
 	AddHeader(layout, L["Where to show the list"])
 	local s = ns.db.settings
@@ -253,10 +247,8 @@ local function AddWindowSection(layout)
 	AddCheckbox("showBNet", L["Include Battle.net friends"],
 		L["In the separate window, also list your Battle.net friends who are playing right now. Those on the other faction can only get a Battle.net whisper."],
 		RefreshList)
-	-- (which key opens what is changed in the game's Key Bindings, linked below; the setup also offers the swap)
-	-- The shortcut tab only exists with the separate window: with Old Friends List inside the
-	-- Social window it's off and can't be turned on (the saved choice comes back with the
-	-- separate window).
+	-- The shortcut tab only exists with the separate window: with the list in the Social window it's
+	-- off and can't be turned on (which key opens what: the game's Key Bindings, linked below).
 	local setting = Settings.RegisterProxySetting(category, "OldFriendsList_socialIcon", VarType("boolean"),
 		L["Tab in the Social window"], ns.DEFAULTS.socialIcon,
 		function() return (s.socialIcon and Separate()) and true or false end,

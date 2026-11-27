@@ -23,9 +23,8 @@ local selectedBNet    -- the Battle.net friend's entry, when the selected row is
 local BNET_COLOR = "|cff82c5ff"   -- Battle.net names, as the game colours them
 
 --------------------------------------------------------------------------------
--- "Statuses may be out of date" (1.0.3): a small clock next to the online count, here and on
--- the group header in the Social window, while the game doesn't let the addon check anyone
--- (in a dungeon, raid, battleground...). Not in combat: that pause lasts seconds.
+-- "Statuses may be out of date": a small clock next to the online count (here and on the Social
+-- window's header) while the game blocks our checks (dungeon, raid, battleground; not combat).
 --------------------------------------------------------------------------------
 
 local STALE_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
@@ -75,13 +74,9 @@ local Actions = {}
 ns.Actions = Actions
 
 --------------------------------------------------------------------------------
--- Whispers (1.1.1). The game's own "open a whisper" (ChatFrameUtil.SendTell / SendBNetTell),
--- called by an addon, leaves the chat's globals (ACTIVE_CHAT_EDIT_BOX, LAST_ACTIVE_CHAT_EDIT_BOX,
--- CHAT_FOCUS_OVERRIDE) tainted until /reload. Blizzard's Social window then reads them when you
--- whisper from its own cards, its protected SearchFriends() gets blocked and its list empties.
--- Tested in game (taintLog, /ofl diag): opening the chat's input box ourselves taints them too,
--- and a name link on our cards was unreliable. What stays clean: a line in chat with the name as
--- a link. Clicking it is the game's own whisper, exactly like clicking a name in chat.
+-- Whispers. The game's SendTell / SendBNetTell (or opening the chat box) called by an addon leaves
+-- the chat's globals tainted until /reload, and the Social window's protected SearchFriends() then
+-- gets blocked. Clean: a name link, clicked like any name in chat.
 --------------------------------------------------------------------------------
 
 local function ChatLine(text)
@@ -95,11 +90,9 @@ function Actions.Whisper(key)
 end
 
 --------------------------------------------------------------------------------
--- Link layers (1.1.1): a frame made from Blizzard's own InlineHyperlinkFrameTemplate, over a
--- name or a button. Its click script comes from the template (SetItemRef(link, text, button),
--- no chat window needed), so a click on its link runs only the game's code: the whisper opens
--- straight away and the chat stays clean. We never set its click script: a script set by an
--- addon runs as the addon's code. Only the hover is ours.
+-- Link layers: a frame from Blizzard's InlineHyperlinkFrameTemplate over a name or a button. Its
+-- click script is the template's, so clicking the link runs only the game's code. Never set its
+-- click script: one set by an addon runs as addon code.
 --------------------------------------------------------------------------------
 
 -- a player link's target ("player:Name")
@@ -114,11 +107,9 @@ function UI.BNetLinkTarget(entry)
 	return ("BNplayer:%s:%d:0:BN_WHISPER:%s"):format(name, id, name)
 end
 
--- Fills `layer` with a link to `target` showing `label`: the label padded with spaces inside the
--- link, just enough to cover the layer's width (centred: both sides), so all of the layer takes
--- the click and nothing past it. (1.2.4: a fixed 60 spaces ran far past the separate window's
--- Whisper button and covered Remove, Invite and Add, which then didn't take clicks.)
--- (the same for any frame with links and one of its font strings: a link button's own text)
+-- Fills `layer` with a link to `target` showing `label`, padded with just enough spaces to cover
+-- the layer's width (centred: both sides), so the link takes clicks there and nowhere else.
+-- (Any frame with links works, e.g. a link button's own text.)
 function UI.FillLink(holder, fontString, target, label, centred)
 	label = label or ""
 	local width = math.floor((holder:GetWidth() or 0) - (holder.linkInset or 0))
@@ -165,9 +156,7 @@ function UI.CreateLinkLayer(owner, region, fontObject, centred, hover)
 	layer:SetAllPoints(region)
 	layer:SetFrameLevel(owner:GetFrameLevel() + 2)
 	layer:EnableMouse(true)
-	-- (No SetPropagateMouseClicks here: it's forbidden in combat, and building a layer then, e.g.
-	-- opening the separate window for the first time mid-fight, had the game block it and blame
-	-- us. Frames don't pass clicks to what's under them anyway.)
+	-- (no SetPropagateMouseClicks: it's forbidden in combat, and building a layer mid-fight got blocked)
 	-- (the template's hover shows the link in a tooltip: not for player links)
 	layer:SetScript("OnHyperlinkEnter", nil)
 	layer:SetScript("OnHyperlinkLeave", nil)
@@ -217,15 +206,11 @@ function UI.WhisperLinkTarget(key, bnet)
 	return key and UI.PlayerLinkTarget(Data.Display(key)) or nil
 end
 
--- One hovered row at a time, with its highlight and tooltip, read from the mouse's position
--- every frame (a link armed over a row takes the mouse from it: going by enter/leave events,
--- rows stayed lit). `area`: the list's visible part; `eachRow(fn)`: calls fn for each row;
--- `tooltip(row)`: shows the row's tooltip. Returns the OnUpdate function.
--- Called with "hide" (the list closed): nothing lit, its tooltip gone at once, as Blizzard's
--- cards do when their window closes.
--- the tooltip shown belongs to something on the row, under the mouse (its Invite button)?
--- Only things inside the row count: a unit in the world owns the tooltip through UIParent,
--- which is always "under the mouse", and blocked the row's tooltip until that one faded.
+-- One hovered row at a time (highlight + tooltip), read from the mouse's position rather than
+-- enter/leave events (an armed link takes the mouse from the row). `area`: the list's visible
+-- part; `eachRow(fn)`; `tooltip(row)`. Called with "hide": nothing lit, tooltip gone.
+-- is the tooltip owned by something on the row under the mouse (its Invite button)? Only the row's
+-- own children count: units in the world own it through UIParent, which is always under the mouse.
 local function TooltipTakenBy(row)
 	local owner = GameTooltip:IsShown() and GameTooltip:GetOwner()
 	if not owner or owner == row or not (owner.IsMouseOver and owner:IsMouseOver()) then return false end
@@ -237,9 +222,37 @@ local function TooltipTakenBy(row)
 	return false
 end
 
+-- A row's right-click menu covers the rows below it: while it's open, that row stays lit.
+local openMenu, openMenuRow
+function UI.MenuOpenedFor(row, menu)
+	openMenu, openMenuRow = menu, row
+end
+local function MenuRow()
+	if openMenu and openMenu:IsShown() and openMenuRow and openMenuRow:IsVisible() then return openMenuRow end
+	openMenu, openMenuRow = nil, nil
+	return nil
+end
+
 function UI.HoverTracker(area, eachRow, tooltip)
 	local current
 	return function(hide)
+		local menuRow = hide ~= "hide" and MenuRow()
+		if menuRow then
+			-- a row's menu is open: keep that row lit (if it's ours), nothing else, no tooltip
+			local ours
+			eachRow(function(row) if row == menuRow then ours = true end end)
+			local keep = ours and menuRow or nil
+			if current ~= keep then
+				if current then
+					current:UnlockHighlight()
+					if GameTooltip:IsOwned(current) then GameTooltip:Hide() end
+				end
+				current = keep
+				if keep then keep:LockHighlight() end
+			end
+			if keep and GameTooltip:IsOwned(keep) then GameTooltip:Hide() end
+			return
+		end
 		local found
 		if hide ~= "hide" and area:IsVisible() and area:IsMouseOver() then
 			eachRow(function(row)
@@ -247,8 +260,7 @@ function UI.HoverTracker(area, eachRow, tooltip)
 			end)
 		end
 		if found and found == current then
-			-- (1.2.2) still on the same row, but its tooltip went: a button on it (Invite) showed
-			-- its own and hid it on leaving. Back on the row itself: show the row's again.
+			-- still on the same row, but a button on it (Invite) hid the row's tooltip: show it again
 			if not GameTooltip:IsOwned(found) and not TooltipTakenBy(found) then tooltip(found) end
 			return
 		end
@@ -260,15 +272,13 @@ function UI.HoverTracker(area, eachRow, tooltip)
 		current = found
 		if found then
 			found:LockHighlight()
-			-- (1.2.3) straight onto its Invite button (from the right): that button's tooltip
-			-- stays; the row's comes when the mouse moves onto the row itself
+			-- straight onto its Invite button: that button's tooltip stays
 			if not TooltipTakenBy(found) then tooltip(found) end
 		end
 	end
 end
 
--- runs fn every `interval` seconds while `frame` is visible, and not at all otherwise
--- (1.2.0: the hover check went from every frame to 20 times a second, only with the list open)
+-- runs fn every `interval` seconds while `frame` is visible
 function UI.PollWhileShown(frame, interval, fn)
 	local ticker
 	local function Start()
@@ -288,13 +298,9 @@ function UI.PollWhileShown(frame, interval, fn)
 end
 UI.HOVER_EVERY = 0.05   -- seconds: the eye can't tell from every frame
 
--- (1.2.5) A link button (UIPanelButtonTemplate + InlineHyperlinkFrameTemplate) doesn't sink when
--- clicked: the click goes to its link, and the template's OnMouseDown / OnMouseUp, which swap the
--- textures, don't run. While the mouse is on it (`watch`), it reads the left button every frame
--- and sinks or rises with the template's own functions, like any button: a press that began on
--- it, until the button goes up or the mouse leaves. Looks only: the click stays the game's.
--- (the button's own pushed state too, held while sunk: the game then moves its text down a little,
--- as on the other buttons; the textures alone left the text where it was)
+-- A link button doesn't sink when clicked: the click goes to its link and the template's
+-- OnMouseDown/Up don't run. While the mouse is on it (`watch`), it sinks and rises with the left
+-- button, using the template's own functions (and the pushed state, which moves the text).
 local function PressSunk(button, sunk)
 	if sunk == button.sunk then return end
 	button.sunk = sunk
@@ -408,11 +414,9 @@ function Actions.AddByName(text, info)
 end
 
 --------------------------------------------------------------------------------
--- Our own dialog (1.2.0), for Add / Note / Remove. These used Blizzard's shared popups
--- (StaticPopup_Show): an addon showing one writes into that shared frame, and the game reuses
--- it for protected things (release spirit, group invites, resurrects...), which then got blocked
--- and blamed on us ("Interface action failed because of an AddOn", UNKNOWN()). This one is ours
--- alone, with the same look (Blizzard's dark dialog border and red dialog buttons).
+-- Our own dialog for Add / Note / Remove, with the game's look. Blizzard's shared popups
+-- (StaticPopup_Show) get tainted by an addon, and the game reuses them for protected things
+-- (release spirit, invites...), which were then blocked and blamed on us.
 --------------------------------------------------------------------------------
 
 local dialog
@@ -520,7 +524,7 @@ local function InfoLine(key, f)
 	if Data.status[key] == nil then
 		return GREY .. prefix .. L["Checking..."] .. "|r"
 	end
-	-- (1.2.3) "Last online 3 hours ago", in Blizzard's words (Data.LastOnline)
+	-- "Last online 3 hours ago", in Blizzard's words (Data.LastOnline)
 	return GREY .. prefix .. Data.LastOnline(f.lastSeen) .. "|r"
 end
 
@@ -534,7 +538,7 @@ local function ShowTooltip(row)
 	local online = Data.status[key] == "online"
 	local who = Data.LevelClass(f)
 	if who then GameTooltip:AddLine(who, 1, 1, 1) end
-	-- (Short, like Blizzard's: online, the zone; offline, "Last online ..." in its words; the note.)
+	-- (short, like Blizzard's: online, the zone; offline, "Last online ..."; the note)
 	if online then
 		if f.lastZone then GameTooltip:AddLine(f.lastZone, 1, 1, 1) end
 	else
@@ -550,7 +554,7 @@ end
 local function OpenRowMenu(row)
 	local key = row.key
 	if not (key and MenuUtil and MenuUtil.CreateContextMenu) then return end
-	MenuUtil.CreateContextMenu(row, function(_, root)
+	local menu = MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(Data.Display(key))
 		root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(key) end)
 		root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(key) end)
@@ -559,6 +563,7 @@ local function OpenRowMenu(row)
 		root:CreateDivider()
 		root:CreateButton(G("REMOVE_FRIEND", "Remove Friend"), function() Actions.Remove(key) end)
 	end)
+	UI.MenuOpenedFor(row, menu)
 end
 
 -- the name as shown in a list: class color (option) when online, grey when offline
@@ -627,8 +632,7 @@ local function ShowBNetTooltip(row)
 	local far = FarReason(entry)
 	if far then GameTooltip:AddLine(far, 1, 0.3, 0.3) end
 	if entry.battleTag then GameTooltip:AddLine(L["Battle.net friend: %s"]:format(entry.battleTag), 0.51, 0.77, 1) end
-	-- (1.2.3: no "double-click to whisper" hint, like Blizzard's tooltips; only where the whisper
-	-- is a Battle.net one, which isn't obvious)
+	-- (no "double-click to whisper" hint, like Blizzard's; only for Battle.net whispers)
 	local hint
 	if entry.otherRegion then
 		hint = L["Other region: double-click for a Battle.net whisper."]
@@ -647,7 +651,7 @@ end
 local function OpenBNetMenu(row)
 	local entry = row.bnet
 	if not (entry and MenuUtil and MenuUtil.CreateContextMenu) then return end
-	MenuUtil.CreateContextMenu(row, function(_, root)
+	local menu = MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(entry.key)
 		if Reachable(entry) then
 			root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(entry.key) end)
@@ -661,6 +665,7 @@ local function OpenBNetMenu(row)
 			root:CreateButton(L["Battle.net whisper"], function() Actions.WhisperBNet(entry) end)
 		end
 	end)
+	UI.MenuOpenedFor(row, menu)
 end
 
 -- whisper the selected row: by name, or through Battle.net for the other faction / region (the
@@ -673,10 +678,8 @@ local function WhisperSelected()
 	end
 end
 
--- (1.2.4) The Whisper button is itself a link button (UIPanelButtonTemplate +
--- InlineHyperlinkFrameTemplate, made in Build): its text is a link to the selected friend, so a
--- click opens the whisper with the game's own code. Being the button itself (no layer on top),
--- its highlight and text colour work as on any button.
+-- The Whisper button is itself a link button (UIPanelButtonTemplate + InlineHyperlinkFrameTemplate):
+-- its text links to the selected friend, so a click opens the whisper with the game's own code.
 local function UpdateWhisperLink()
 	if not (whisperButton and whisperButton.isLinkButton) then return end
 	local label = G("WHISPER", "Whisper")
@@ -719,8 +722,7 @@ local function InitRow(row, elementData)
 	if not row.oflSetUp then
 		row.oflSetUp = true
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-		-- double-click to whisper (1.1.1): the first click selects and arms an invisible link over
-		-- the row, the second lands on it and the game opens the whisper (UI.ArmWhisper)
+		-- double-click to whisper: the first click selects and arms a link over the row (UI.ArmWhisper)
 		row:SetScript("OnClick", function(self, button)
 			SelectKey(self.key, self.bnet)
 			if button == "RightButton" then
@@ -761,9 +763,8 @@ end
 -- Refresh
 --------------------------------------------------------------------------------
 
--- what the list shows: online first (Old Friends and, with the option on, Battle.net friends
--- not on the list, together by name), then offline Old Friends (unless "show offline friends"
--- is off, 1.3.0)
+-- what the list shows: online first (Battle.net friends not on the list too, with that option),
+-- then offline friends (unless they're hidden)
 function UI.Items()
 	local online, offline = {}, {}
 	local showOffline = ns.db.settings.showOffline ~= false
@@ -912,9 +913,7 @@ local function Build()
 	listView:SetElementExtent(ns.db.settings.showDetails and ROW_HEIGHT or ROW_HEIGHT_COMPACT)
 	listView:SetElementInitializer("OldFriendsListRowTemplate", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, listView)
-	-- (1.2.6) the controller's cursor reads the scroll boxes it moves through, and ours taints it
-	-- ("Interface action failed because of an AddOn"): it skips the list (only with the controller
-	-- interface on; the buttons below stay reachable). See ns.HideFromController.
+	-- the controller's cursor reads scroll boxes, and ours taints it: it skips the list
 	ns.HideFromController(scrollBox)
 	ns.HideFromController(scrollBar)
 	-- one lit row at a time (UI.HoverTracker), checked 20 times a second while the window is open
@@ -942,9 +941,8 @@ local function Build()
 		-- on the same click would run as addon code)
 		whisperButton:SetScript("OnHyperlinkEnter", nil)
 		whisperButton:SetScript("OnHyperlinkLeave", nil)
-		-- its highlight by the mouse's position, held while it's on the button: moving over a
-		-- link's letters passes the mouse between the button and the link, and the game's own
-		-- highlight blinked with it
+		-- its highlight by the mouse's position: over the link's letters the mouse passes between the
+		-- button and the link, and the game's own highlight blinked
 		UI.PollWhileShown(frame, UI.HOVER_EVERY, function(hide)
 			local over = hide ~= "hide" and whisperButton:IsVisible() and whisperButton:IsEnabled()
 				and whisperButton:IsMouseOver() or false
@@ -985,7 +983,7 @@ local function Build()
 	if close then close:SetScript("OnClick", function() frame:Hide() end) end
 
 	tinsert(UISpecialFrames, "OldFriendsListFrame")
-	-- closing the window clears the selection (1.1.4)
+	-- closing the window clears the selection
 	frame:HookScript("OnHide", function() SelectKey(nil, nil) end)
 	frame:Hide()
 end

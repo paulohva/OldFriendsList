@@ -82,9 +82,8 @@ function Notify.Offline(key)
 end
 
 --------------------------------------------------------------------------------
--- Battle.net friends not on the list (1.0.2): the same lines, with the BattleTag (without its
--- number) in Battle.net blue right after [Character]. Only when BattleNet.ShouldNotify() says
--- they're part of what you see; Old Friends never get these (they have their own line).
+-- Battle.net friends not on the list: the same lines, with the BattleTag (no number) in
+-- Battle.net blue after [Character]; only when BattleNet.ShouldNotify() says so
 --------------------------------------------------------------------------------
 
 local BNET_COLOR = "|cff82c5ff"
@@ -136,8 +135,7 @@ function Notify.BNetOffline(entry)
 	SystemLine((blizzard or ns.L["%s has gone offline."]):format(BNetLink(entry) .. (tag and (" " .. tag) or "")))
 end
 
--- after the first full check: from now on, logins and logouts are announced one by one.
--- (Who was already online when you logged in isn't announced: no summary line since 0.3.2.)
+-- after the first full check: from now on, logins and logouts are announced one by one
 function Notify.FirstCheckDone()
 	Notify.ready = true
 end

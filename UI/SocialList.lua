@@ -1,21 +1,15 @@
 --------------------------------------------------------------------------------
--- Old Friends inside the game's Social window (O): a section "Old Friends List x/y" above
--- Blizzard's Favorites, collapsible, with rows drawn like Blizzard's friend cards. Only when
--- the "integrated" mode is chosen.
+-- Old Friends List inside the game's Social window (O), "integrated" mode: a collapsible group
+-- "Old Friends List x/y" above Blizzard's Favorites, with cards drawn like Blizzard's.
 --
--- Blizzard's friends list is never touched: we don't add to its data, call its functions or
--- wrap its code (doing that makes its card creation run as addon code, and the game then
--- blocks the protected calls those cards make). We only read plain fields and use frame calls.
+-- Blizzard's friends list is never touched: no adding to its data, calling or wrapping its code
+-- (its cards would then run as addon code and their protected calls get blocked). We only read
+-- plain fields and use frame calls.
 --
--- One scroll for everything (SINGLE_SCROLL, 1.0.0): our own scroll box takes the place of
--- Blizzard's list. Inside it go our group (every friend, no scroll bar of its own) and, below
--- it, Blizzard's list itself, moved in (SetParent) and made as tall as its content (its view's
--- total extent, a plain field), so it never scrolls on its own: our one scroll bar, in
--- Blizzard's scroll bar column, scrolls both. Blizzard's own scroll bar waits in a hidden frame.
--- Turning the mode off puts everything back exactly.
---
--- With SINGLE_SCROLL off, the 0.3.x layout: our group with its own scroll list (up to
--- MAX_ROWS cards) at the top, and Blizzard's list moved down by the group's height.
+-- One scroll (SINGLE_SCROLL): our scroll box takes the place of Blizzard's list and holds our group
+-- and, below it, Blizzard's list itself (reparented, as tall as its content), so one scroll bar
+-- scrolls both. Turning the mode off puts everything back. Otherwise: two scrolls, our group with its
+-- own scroll list at the top and Blizzard's list moved down.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -25,12 +19,9 @@ local SocialList = {}
 ns.SocialList = SocialList
 
 local SINGLE_SCROLL = true
--- (1.2.6) The layout, chosen once when the section is built: one scroll, unless the game's
--- controller interface is on. The controller's cursor reads the scroll boxes it moves through,
--- and with one scroll Blizzard's list sits inside ours, made by this addon: that tainted the
--- cursor ("Interface action failed because of an AddOn"). With the controller, the two-scroll
--- layout leaves Blizzard's list where it is, and our group is kept out of the cursor's way
--- (ns.HideFromController). nil until built.
+-- The layout, chosen once when the section is built: one scroll, unless the controller interface
+-- is on. The controller's cursor reads the scroll boxes it moves through, and with one scroll
+-- Blizzard's list sits inside ours (ours taints it). With the controller: two scrolls / NATIVE_NAV.
 local single
 
 local ROW_TEMPLATE = "OldFriendsListSocialRowTemplate"
@@ -45,17 +36,14 @@ local function MaxRows()
 end
 local PAN_EXTENT = 36              -- one mouse wheel step in the single scroll (about Blizzard's)
 local PAD_LEFT, PAD_RIGHT, PAD_TOP = 10, 7, 10
--- below our last card: nothing more. Blizzard's list starts with its own padding, which already
--- makes about the same gap Blizzard leaves between a group's last card and the next header
--- (measured in game: ~12)
+-- below our last card: nothing more (Blizzard's list starts with its own padding, ~12)
 local END_GAP = 0
 -- collapsed: header to header, like Blizzard's collapsed groups (measured in game: 2 less)
 local COLLAPSED_END_GAP = -2
 local DOT_MARGIN = 6               -- room for the status dots, centred on the cards' top-left corner
 local HEADER_GAP = 8               -- header to first card, same as Blizzard's Favorites
--- our scroll bar goes where Blizzard puts its own, next to its list: right of the list, from
--- just below its top to just above its bottom (its template: x 5, top -7, bottom 4). Read from
--- Blizzard's scroll bar anchors when they're the usual kind, so we follow if they change.
+-- our scroll bar goes where Blizzard puts its own (its template: x 5, top -7, bottom 4); read from
+-- Blizzard's scroll bar anchors when they're the usual kind
 local BAR_X, BAR_TOP, BAR_BOTTOM = 5, -7, 4
 
 local list            -- SocialUIFrame.FriendsList
@@ -160,9 +148,8 @@ local function UpdatePartyButton(button, key)
 	if GameTooltip:IsOwned(button) then ShowPartyTooltip(button) end
 end
 
--- The status dot exactly as on Blizzard's cards (SocialCardPresenceHolderTemplate and
--- FriendsListSocialCardMixin:LayoutScaledPresenceHolderAnchors): 19x19, centred on the card's
--- top-left corner at (3, -4), all of it grown with the game's text size, weighted 0.6.
+-- The status dot exactly as on Blizzard's cards (SocialCardPresenceHolderTemplate): 19x19, centred
+-- on the card's top-left corner at (3, -4), grown with the game's text size, weighted 0.6.
 local DOT_SIZE, DOT_X, DOT_Y, DOT_WEIGHT = 19, 3, -4, 0.6
 
 local function TextScaleWeighted()
@@ -196,11 +183,9 @@ local function SetSelectedKey(key)
 	end
 end
 
--- One selected card in the whole window (1.1.4): Blizzard's selection is cleared when one of ours
--- gets selected.
--- (Its own ClearSelections: the card it leaves keeps "not selected" written by us until its list
--- rebuilds, which it does on every Battle.net update; only a click on its cards reads that, and
--- that click runs nothing protected. Checked with taintLog 2: nothing blocked, chat clean.)
+-- One selected card in the whole window: Blizzard's selection is cleared when one of ours gets
+-- selected. (Its own ClearSelections writes "not selected" into its cards until its list rebuilds;
+-- only a click on its cards reads that, and runs nothing protected. Checked with taintLog 2.)
 local function ClearBlizzardSelection()
 	local behavior = list and list.selectionBehavior
 	if not (behavior and behavior.HasSelection and behavior.ClearSelections) then return end
@@ -217,8 +202,8 @@ local function InitRow(row, elementData)
 		row.oflSetUp = true
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		-- Blizzard's selected card look
-		-- the status dot in a frame of its own over the card, like Blizzard's PresenceHolder: the
-		-- card's highlight (drawn over its own textures, additive) doesn't wash it out on hover
+		-- the status dot in a frame of its own over the card, like Blizzard's: the card's hover highlight
+		-- doesn't wash it out
 		row.PresenceHolder = CreateFrame("Frame", nil, row)
 		row.PresenceHolder:SetAllPoints()
 		row.PresenceHolder:SetFrameLevel(row:GetFrameLevel() + 1)
@@ -227,8 +212,7 @@ local function InitRow(row, elementData)
 		row.SelectedTexture:SetAllPoints()
 		row.SelectedTexture:SetAtlas("friends-card-selected")
 		row.SelectedTexture:SetBlendMode("ADD")
-		-- a click selects; double-click to whisper (1.1.1): the first click also arms an invisible
-		-- link over the card, the second lands on it and the game opens the whisper itself
+		-- a click selects; double-click to whisper: the first click also arms a link over the card
 		-- (UI.ArmWhisper: the chat stays clean)
 		row:SetScript("OnClick", function(self, button)
 			if button == "RightButton" then
@@ -266,11 +250,9 @@ local function SearchText()
 	return type(text) == "string" and text:lower() or ""
 end
 
--- Old Friends to show: online first, filtered by the search box; with "hide friends already
--- shown by Battle.net" on, not those a Battle.net friend is playing right now (Blizzard's own
--- card shows them, just below); with "show offline friends" off (1.3.0), only those online.
--- Returns the keys shown, how many are online, and how many match in all (offline included:
--- the header's "3/6")
+-- the friends to show (online first, filtered by the search box; minus those a Battle.net friend
+-- is playing, with that option; minus offline ones, if hidden), how many are online, and how many
+-- match in all (offline included: the header's "3/6")
 function SocialList.Keys(search)
 	local keys, online, total = {}, 0, 0
 	local hideBNet = ns.db.settings.hideBNetDuplicates and ns.BattleNet
@@ -286,14 +268,23 @@ function SocialList.Keys(search)
 	return keys, online, total
 end
 
--- the section's height for n friends (header only when collapsed). With no friends to show it's
--- hidden, unless keepHeader: an empty list still shows its header, with the "+" to add the first one
+-- the section's height for n friends (header only when collapsed); 0 with nothing to show, unless
+-- keepHeader (an empty list keeps its header, for the "+")
 function SocialList.SectionHeight(n, collapsed, keepHeader)
 	if n == 0 and not keepHeader then return 0 end
 	local rows = collapsed and 0 or math.min(n, MaxRows())
 	-- header gap + the cards with the spacing between them (none after the last one)
 	local body = rows > 0 and (HEADER_GAP + rows * (ROW_HEIGHT + ROW_SPACING) - ROW_SPACING) or 0
 	return PAD_TOP + HEADER_HEIGHT + body + (rows > 0 and END_GAP or COLLAPSED_END_GAP)
+end
+
+-- the title's colour, like Blizzard's group headers: grey, white with the mouse on it.
+-- over: nil = whether the mouse is on it now
+local function ColourTitle(h, over)
+	if over == nil then over = h:IsMouseOver() end
+	if h.CheckHighlightTitle and pcall(h.CheckHighlightTitle, h, over and true or false) then return end
+	local c = over and HIGHLIGHT_FONT_COLOR or DISABLED_FONT_COLOR
+	if c and h.ButtonText then h.ButtonText:SetTextColor(c:GetRGB()) end
 end
 
 local function SetCollapseIcon(collapsed)
@@ -326,6 +317,7 @@ local function LayoutTwoScrolls()
 	local text = L["Old Friends List %d/%d"]:format(online, total)
 	if header.SetText then header:SetText(text) end
 	if header.ButtonText then header.ButtonText:SetText(text) end
+	ColourTitle(header)
 	SetCollapseIcon(collapsed)
 	UI.UpdateStale(header.Stale)
 
@@ -367,11 +359,8 @@ local function BlizzardExtent()
 	return math.ceil(extent)
 end
 
--- Can't move or resize Blizzard's list right now? Only in combat, and only if the game protects
--- it: frames it protects can't be moved by addons mid-fight. Its friends list isn't protected,
--- so it normally follows straight away, even in combat. (Waiting for every fight to end left
--- the list at the height of an empty list when the window was opened in combat after a
--- /reload: Favorites and Friends vanished until the fight was over.)
+-- Can't move or resize Blizzard's list right now? Only in combat, and only if the game protects it
+-- (its friends list isn't, so it normally follows at once, even in combat).
 local function Locked()
 	if not Safe.InCombat() then return false end
 	for _, frame in ipairs({ list.ScrollBox, list.ScrollBar }) do
@@ -491,6 +480,7 @@ local function LayoutSingleScroll()
 		local text = L["Old Friends List %d/%d"]:format(online, total)
 		if header.SetText then header:SetText(text) end
 		if header.ButtonText then header.ButtonText:SetText(text) end
+		ColourTitle(header)
 		SetCollapseIcon(collapsed)
 		UI.UpdateStale(header.Stale)
 		LayoutRows(keys, collapsed)
@@ -503,11 +493,9 @@ local function LayoutSingleScroll()
 end
 
 --------------------------------------------------------------------------------
--- Controller layout (1.2.6, NATIVE_NAV): the two-scroll layout, but our cards are plain buttons in
--- a native ScrollFrame instead of a ScrollBox. The controller's cursor moves through a ScrollFrame
--- with engine calls only (its position, GetVerticalScroll / SetVerticalScroll): nothing this addon
--- wrote is read, so it stays clean and can reach our cards. (Through a ScrollBox it reads the
--- box's Lua state, written by us, and got tainted.)
+-- Controller layout (NATIVE_NAV): two scrolls, but our cards are plain buttons in a native
+-- ScrollFrame. The controller's cursor moves through it with engine calls only, reading nothing we
+-- wrote, so it stays clean and reaches our cards (through a ScrollBox it read our Lua state).
 --------------------------------------------------------------------------------
 
 local NATIVE_NAV = true
@@ -532,6 +520,7 @@ local function LayoutControllerList()
 	local text = L["Old Friends List %d/%d"]:format(online, total)
 	if header.SetText then header:SetText(text) end
 	if header.ButtonText then header.ButtonText:SetText(text) end
+	ColourTitle(header)
 	SetCollapseIcon(collapsed)
 	UI.UpdateStale(header.Stale)
 
@@ -574,8 +563,7 @@ local function LayoutControllerList()
 end
 
 -- The controller interface was turned on after the one-scroll layout was built: Blizzard's list
--- goes back exactly where it was and our group stays hidden in the Social window until a /reload
--- builds the controller's layout (said once in chat). Off again: back to normal.
+-- goes back where it was, and our group hides until a /reload builds the controller's layout.
 local controllerSaid
 local function ControllerWaits()
 	return single and ns.GamepadUI() or false
@@ -631,8 +619,7 @@ local function BuildHeader()
 	h:SetPoint("TOPLEFT", section, "TOPLEFT", PAD_LEFT, -PAD_TOP)
 	h:SetPoint("TOPRIGHT", section, "TOPRIGHT", -PAD_RIGHT, -PAD_TOP)
 
-	-- "+": add a character, next to the collapse sign. Quiet until the mouse is on it (like the
-	-- gear in the separate window). Its own button: clicking it doesn't collapse the group.
+	-- "+": add a character. Quiet until the mouse is on it; its own button, so it doesn't collapse the group.
 	local add = CreateFrame("Button", nil, h)
 	add:SetSize(18, 18)
 	if h.CollapseButton then
@@ -665,8 +652,7 @@ local function BuildHeader()
 	-- statuses may be out of date (in a dungeon...): the separate window's clock, left of the "+"
 	h.Stale = UI.CreateStaleIcon(h, 16)
 	h.Stale:SetPoint("RIGHT", add, "LEFT", -6, 0)
-	-- right-click (1.3.0): a small menu to the options (where "show offline friends" lives), like the
-	-- minimap button's; left-click collapses or opens the group, as before
+	-- right-click: a small menu to the options; left-click collapses or opens the group
 	h:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	h:SetScript("OnClick", function(self, mouse)
 		if mouse == "RightButton" then
@@ -689,6 +675,9 @@ local function BuildHeader()
 		end
 		SocialList.Layout()
 	end)
+	h:HookScript("OnEnter", function(self) ColourTitle(self, true) end)
+	h:HookScript("OnLeave", function(self) ColourTitle(self, false) end)
+	ColourTitle(h, false)
 	return h
 end
 
@@ -754,8 +743,7 @@ local function BuildTwoScrolls()
 	section = CreateFrame("Frame", nil, list)
 	section:SetFrameLevel(list.ScrollBox:GetFrameLevel() + 1)
 
-	-- the section takes the place where Blizzard's list starts (its top anchors); with a
-	-- single top anchor, its width is copied from Blizzard's list on each layout
+	-- the section takes the place where Blizzard's list starts (its top anchors)
 	local topAnchors = 0
 	for _, p in ipairs(saved[list.ScrollBox]) do
 		if p[1]:find("TOP") then
@@ -771,9 +759,8 @@ local function BuildTwoScrolls()
 	scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
 	scrollBox:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, -2)
 
-	-- the scroll bar in Blizzard's scroll bar column: the section has the width and the top of
-	-- Blizzard's list, so the same offsets from the section put it exactly where Blizzard's own
-	-- would be. Its bottom follows our cards (the list's right edge is PAD_RIGHT in from the section's).
+	-- the scroll bar in Blizzard's scroll bar column: the section has the width and top of Blizzard's
+	-- list, so the same offsets put it where Blizzard's own would be
 	scrollBar = CreateFrame("EventFrame", nil, section, "MinimalScrollBar")
 	scrollBar:SetPoint("TOPLEFT", section, "TOPRIGHT", BAR_X, BAR_TOP)
 	scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", BAR_X + PAD_RIGHT, BAR_BOTTOM)
@@ -853,17 +840,15 @@ local function Install()
 			ns.HideFromController(section)
 		end
 		-- redraw when the friends tab shows, and when the search text changes
-		-- the window opening: our group is drawn straight away (1.2.1). Through Refresh it waited
-		-- 0.1 s, and showed its state from last time for that moment (a friend still online...).
-		-- Changes while it's open still go through Refresh, gathered.
+		-- the window opening: our group is drawn at once (through Refresh it showed last time's state
+		-- for 0.1 s). Changes while it's open go through Refresh, gathered.
 		list:HookScript("OnShow", function()
 			local ok, err = pcall(SocialList.Layout)
 			if not ok then ns.QuietError("social section", err) end
 		end)
-		-- closing the window (or leaving the friends tab) clears our selection (1.1.4)
+		-- closing the window (or leaving the friends tab) clears our selection
 		list:HookScript("OnHide", function() SetSelectedKey(nil) end)
-		-- a card of Blizzard's selected: ours isn't anymore (a secure
-		-- post-hook: Blizzard's code runs first, untouched)
+		-- a card of Blizzard's selected: ours isn't anymore (secure post-hook)
 		local behavior = list.selectionBehavior
 		if behavior and type(behavior.ToggleSelect) == "function" then
 			hooksecurefunc(behavior, "ToggleSelect", function()
