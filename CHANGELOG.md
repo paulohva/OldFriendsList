@@ -4,6 +4,14 @@ All notable changes to Old Friends List are listed here.
 
 ## Unreleased
 
+## 1.3.2
+
+- **Fix:** with a friend's right-click menu open, moving the mouse over the menu lit up the friend
+  under it and showed their tooltip. The friend you clicked now stays highlighted until the menu
+  closes, as in Blizzard's list.
+- In the Social window, the Old Friends List group's title is grey like Blizzard's (Favorites,
+  Friends), and white with the mouse on it. It was always white.
+
 ## 1.3.1
 
 - **Fix:** typing in the game's Options search could make the game block an action

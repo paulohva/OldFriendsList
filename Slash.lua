@@ -90,8 +90,7 @@ local function List()
 	end
 end
 
--- /ofl diag: for bug reports, in sections: how the addon is set up, what it can see, the game APIs
--- (only the missing ones named), and last the problems (what people usually need to send).
+-- /ofl diag, for bug reports: setup, what it can see, missing game APIs, and the problems last
 local GREEN, RED, YELLOW = "|cff20ff20", "|cffff4040", "|cffffd100"
 local function Good(text) return GREEN .. text .. "|r" end
 local function Bad(text) return RED .. text .. "|r" end

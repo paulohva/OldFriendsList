@@ -69,9 +69,8 @@ local function Modify(_, root, contextData)
 end
 
 --------------------------------------------------------------------------------
--- 1.0.3: a Battle.net friend in the game's Social window (Favorites or the list): add the
--- character they're playing right now, when you could group with it (same faction and realm
--- type, this region). Only the menu changes: Blizzard's cards aren't touched.
+-- A Battle.net friend in the game's Social window: add the character they're playing now, when you
+-- could group with it. Only the menu changes: Blizzard's cards aren't touched.
 --------------------------------------------------------------------------------
 
 local BNET_TAGS = { "MENU_UNIT_BN_FRIEND", "MENU_UNIT_BN_FRIEND_OFFLINE" }

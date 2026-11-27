@@ -12,10 +12,8 @@ ns.Data = Data
 Data.status = {}
 
 --------------------------------------------------------------------------------
--- Names. On Forever every character has a first and a last name ("Asha Brightvale"),
--- unique across the whole region: there are no realm suffixes. Each part is 2-12
--- letters (accents allowed), first letter upper case, the rest lower case.
--- A friend is keyed by the full name exactly as the game writes it.
+-- Names. On Forever every character has a first and a last name ("Asha Brightvale"), unique
+-- across the region (no realm suffixes), each part 2-12 letters. A friend is keyed by the full name.
 --------------------------------------------------------------------------------
 
 local function Trim(s)
@@ -60,10 +58,8 @@ function Data.MyKey()
 end
 
 --------------------------------------------------------------------------------
--- Realm types (1.0.3). On Forever, realms of the same type (PvP, PvE, RP, RP-PvP) are one
--- world: characters on them can whisper and group with each other whatever the realm number.
--- Across types they can't (only a Battle.net whisper). The game gives no realm type, but it's
--- always the end of the realm's name: "CAMWOW US1 Realm 4 PvP", "CAMWOWUS2Realm7PvE".
+-- Realm types. Realms of the same type (PvP, PvE, RP, RP-PvP) are one world; across types only a
+-- Battle.net whisper works. The type is the end of the realm's name ("CAMWOW US1 Realm 4 PvP").
 --------------------------------------------------------------------------------
 
 local REALM_TYPES = { "RPPVP", "PVP", "PVE", "RP" }   -- (RP-PvP first: it also ends in "PvP")
@@ -191,8 +187,7 @@ function Data.SetNote(key, note)
 	ns.Fire("FRIENDS_CHANGED", key, "note")
 end
 
--- updates class/level/zone (and realm type, when known) from whatever source (unit, handshake,
--- /who, Battle.net)
+-- updates class/level/zone (and realm type) from any source (unit, handshake, /who, Battle.net)
 function Data.UpdateInfo(key, class, level, zone, realmType)
 	local f = Data.Get(key)
 	if not f then return end
@@ -206,10 +201,8 @@ function Data.UpdateInfo(key, class, level, zone, realmType)
 	if changed then ns.Fire("FRIENDS_CHANGED", key, "info") end
 end
 
--- friends this character can reach: same faction and same realm type (when known). The others
--- stay saved, and show up on a character of their faction and realm type.
--- (1.2.0: kept between calls, read anew when the list changes: the presence check asks for it
--- every 1.5 seconds. Don't change the table it returns.)
+-- friends this character can reach: same faction and realm type (when known); the others stay
+-- saved. Kept between calls (the presence check asks every 1.5 s): don't change the returned table.
 local visible
 function Data.InvalidateVisible() visible = nil end
 
@@ -302,10 +295,8 @@ function Data.LevelClass(f)
 	return className
 end
 
--- An offline friend, worded like Blizzard's Social window cards (FriendsListUtil.GetLastOnlineText,
--- 1.2.3): "Last online 3 hours ago" with the game's own strings, so in the game's language
--- exactly as on its cards; "Offline" when never seen, or over a year ago. (Ours when the game's
--- strings aren't there.)
+-- An offline friend, worded like Blizzard's cards (FriendsListUtil.GetLastOnlineText): "Last online
+-- 3 hours ago" with the game's own strings; "Offline" when never seen or over a year ago.
 local SECONDS_IN = { minute = 60, hour = 3600, day = 86400, month = 2592000, year = 31536000 }
 
 local function GameAgo(t)
@@ -410,10 +401,7 @@ ns.Listen("DB_READY", function()
 end)
 
 -- After a /reload or a quick relog, the list starts from what it showed a moment ago instead of
--- "Checking..." for everyone. That matters most in dungeons and raids, where the game blocks
--- the checks: without this, nobody had a status until you left. What counts is how long ago
--- the session ended (a /reload: seconds), not when each friend was last checked (in a dungeon
--- that can be long ago). The checks confirm or correct it as soon as they can.
+-- "Checking..." for everyone (in dungeons the checks are blocked). The checks then confirm it.
 local RESTORE_MAX = 10 * 60   -- seconds
 Data.RESTORE_MAX = RESTORE_MAX
 

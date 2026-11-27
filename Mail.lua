@@ -1,10 +1,7 @@
 --------------------------------------------------------------------------------
--- Mail (1.1.0): Old Friends List names in the suggestions under the mail's "To:" field.
--- The game's own box (AutoCompleteBox) only knows its own names (Battle.net friends, guild,
--- recent characters). After the game fills it (AutoComplete_Update), our friends whose name
--- starts with what you typed are added after its own, and the box is shown again with them.
--- The box stays the game's: arrows, Tab, Enter and clicks work as always. Only the mail's
--- "To:" field is touched (the same box serves chat whispers: those stay as they are).
+-- Mail: Old Friends List names in the suggestions under the mail's "To:" field, added after the
+-- game's own (AutoComplete_Update post-hook). The box stays the game's; only the mail's "To:" field
+-- is touched (the same box serves chat whispers).
 --------------------------------------------------------------------------------
 
 local _, ns = ...

@@ -141,12 +141,8 @@ local function Pause(reason)
 	wipe(pending)
 end
 
--- Who to check next (one ping every TICK seconds):
---  1. friends never checked yet (just added, or right after login);
---  2. online friends whose check is due: they're the ones who can log out, so the
---     "has gone offline" message stays prompt even with a long list;
---  3. offline friends whose check is due, with the time that's left.
--- Within each group, the one checked longest ago goes first.
+-- Who to check next (one ping every TICK seconds): never checked first; then online friends whose
+-- check is due (they're the ones who can log out); then offline ones. Oldest check first in each.
 local function NextFriend(now)
 	local interval = ns.db.settings.pingInterval
 	local online, onlineAt, offline, offlineAt
@@ -170,8 +166,8 @@ end
 Presence.NextFriend = NextFriend   -- (for tests)
 Presence.lastCheck = lastCheck
 
--- the first check after login is done (everyone has a status, or enough time passed):
--- from then on, logins and logouts are announced
+-- the first check after login is done (everyone has a status, or enough time passed): from then
+-- on, logins and logouts are announced
 local function MaybeFirstCheckDone(now)
 	if Notify.ready or not loginAt then return end
 	local done = true
@@ -185,8 +181,8 @@ local function Tick()
 	if not ns.db then return end
 	local now = GetTime()
 
-	-- unanswered pings: they're online. An offline friend gets a second ping first, with more
-	-- time: when the server lags, the "No player named" can come after the first timeout.
+	-- unanswered pings: they're online. An offline friend gets a second ping first, with more time
+	-- (with server lag, the "No player named" can come after the first timeout).
 	for key, at in pairs(pending) do
 		local limit = confirming[key] and CONFIRM_TIMEOUT or TIMEOUT
 		if now - at >= limit then
@@ -379,9 +375,8 @@ function Presence.Who(key)
 	end
 end
 
--- A few /who results come back as chat lines instead of WHO_LIST_UPDATE:
--- "[Valkur Maul]: Level 29 Tauren Warrior <Guild> - Zone", in the client's language.
--- The pattern is built from the game's own format (WHO_LIST_FORMAT / WHO_LIST_GUILD_FORMAT).
+-- A few /who results come as chat lines instead of WHO_LIST_UPDATE ("[Valkur Maul]: Level 29
+-- Tauren Warrior <Guild> - Zone"), matched with the game's own WHO_LIST_FORMAT / WHO_LIST_GUILD_FORMAT.
 
 -- "|Hplayer:%s|h[%s]|h: Level %d %s %s - %s" -> Lua pattern + which argument each capture is
 local function FormatToPattern(fmt)
@@ -476,8 +471,7 @@ ns.On("WHO_LIST_UPDATE", function()
 			return
 		end
 	end
-	-- not in the list: either nobody was found (offline), or the answer went to chat instead
-	-- (handled above), so only conclude "offline" when the search found nobody at all
+	-- not in the list: nobody found (offline), or the answer went to chat (handled above)
 	if n == 0 then
 		whoKey = nil
 		Data.SetStatus(key, "offline")
