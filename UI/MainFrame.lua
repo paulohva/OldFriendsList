@@ -600,88 +600,12 @@ local function AddGuildInvite(root, key, online)
 	if not online and item and item.SetEnabled then item:SetEnabled(false) end
 end
 
---------------------------------------------------------------------------------
--- Whisper from a menu, clean like the double-click: while the menu is open, a link layer of ours
--- (UI.CreateLinkLayer) lies over its Whisper item, and the click lands on the link: the game
--- opens the whisper itself. Without the link template, the item's own click (Actions.Whisper).
---------------------------------------------------------------------------------
-
-local menuLink        -- { holder, layer }; false when the template isn't there
-local menuLinkItem    -- the menu item's frame it lies over
-local menuLinkTarget
-
-local function CloseMenus()
-	local manager = Menu and Menu.GetManager and Menu.GetManager()
-	if manager and manager.CloseMenus then manager:CloseMenus() end
-end
-
-local function MenuLink()
-	if menuLink ~= nil then return menuLink end
-	local holder = CreateFrame("Frame", nil, UIParent)
-	holder:SetFrameStrata("TOOLTIP")
-	holder:SetSize(1, 1)
-	holder:Hide()
-	local layer = UI.CreateLinkLayer(holder, holder, "GameFontNormal")
-	if not layer then menuLink = false return false end
-	local pressed, propagating
-	holder:SetScript("OnUpdate", function(self)
-		local down = IsMouseButtonDown("LeftButton")
-		if down and layer:IsMouseOver() then pressed = true end
-		if pressed and not down then
-			-- the click went to the link (the game opened the whisper): the menu closes
-			pressed = nil
-			C_Timer.After(0, CloseMenus)
-		end
-		local item = menuLinkItem
-		local l, b, w, h
-		if item and item:IsVisible() then l, b, w, h = item:GetRect() end
-		if l and w and w > 0 then
-			local s = item:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			self:ClearAllPoints()
-			self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", l * s, b * s)
-			self:SetSize(w * s, h * s)
-			-- (the mouse's movement goes on to the item under it, for its highlight; out of combat only)
-			if not propagating and layer.SetPropagateMouseMotion and not InCombatLockdown() then
-				layer:SetPropagateMouseMotion(true)
-				propagating = true
-			end
-			-- (big letters: the link's spaces then fill the item's height too, as UI.ArmWhisper does)
-			local height = math.floor(h * s)
-			if height ~= self.fontHeight then
-				self.fontHeight = height
-				local font = layer.Text:GetFont()
-				if font then layer.Text:SetFont(font, math.max(10, math.min(64, height))) end
-				layer.linkWidth = nil
-			end
-			UI.SetLayerLink(layer, menuLinkTarget, "")
-		elseif not down then
-			-- (the menu is gone; kept while the button is down, so a click under way still lands)
-			menuLinkItem, pressed = nil, nil
-			self:Hide()
-		end
-	end)
-	menuLink = { holder = holder, layer = layer }
-	return menuLink
-end
-
--- a Whisper item in a menu: `target` (UI.WhisperLinkTarget / UI.BNetLinkTarget) for the link,
--- `fallback` for the item's own click
-local function AddWhisper(root, label, target, fallback)
-	local item = root:CreateButton(label, fallback)
-	local link = target and MenuLink()
-	if not (link and item and item.AddInitializer) then return end
-	item:AddInitializer(function(frame)
-		menuLinkItem, menuLinkTarget = frame, target
-		link.holder:Show()
-	end)
-end
-
 local function OpenRowMenu(row)
 	local key = row.key
 	if not (key and MenuUtil and MenuUtil.CreateContextMenu) then return end
 	local menu = MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(Data.Display(key))
-		AddWhisper(root, G("WHISPER", "Whisper"), UI.WhisperLinkTarget(key), function() Actions.Whisper(key) end)
+		root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(key) end)
 		root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(key) end)
 		AddGuildInvite(root, key, Data.status[key] == "online")
 		root:CreateButton(G("WHO", "Who"), function() Actions.Who(key) end)
@@ -780,7 +704,7 @@ local function OpenBNetMenu(row)
 	local menu = MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(entry.key)
 		if Reachable(entry) then
-			AddWhisper(root, G("WHISPER", "Whisper"), UI.WhisperLinkTarget(entry.key), function() Actions.Whisper(entry.key) end)
+			root:CreateButton(G("WHISPER", "Whisper"), function() Actions.Whisper(entry.key) end)
 			root:CreateButton(G("INVITE", "Invite"), function() Actions.Invite(entry.key) end)
 			AddGuildInvite(root, entry.key, true)
 			root:CreateButton(G("WHO", "Who"), function() Actions.Who(entry.key) end)
@@ -789,7 +713,7 @@ local function OpenBNetMenu(row)
 				Actions.AddByName(entry.key, { class = entry.class, level = entry.level, faction = entry.faction })
 			end)
 		else
-			AddWhisper(root, L["Battle.net whisper"], UI.BNetLinkTarget(entry), function() Actions.WhisperBNet(entry) end)
+			root:CreateButton(L["Battle.net whisper"], function() Actions.WhisperBNet(entry) end)
 		end
 	end)
 	UI.MenuOpenedFor(row, menu)
